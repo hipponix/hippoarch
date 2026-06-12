@@ -49,6 +49,21 @@ cd hippoarch
 - **Profiles**: Add a new `.conf` file in `profiles/` for each new machine.
 - **Layouts**: Core partitioning logic lives in `lib/partition.sh`.
 
+## Quality Assurance
+
+To ensure the reliability of these scripts, HippoArch includes a built-in QA framework.
+
+### Local Development
+A `Makefile` is provided to run local checks. Before contributing or pushing changes, you can run:
+- `make install-deps`: Install necessary tools (`shellcheck`, `docker`).
+- `make lint`: Run ShellCheck on all scripts to catch syntax errors and best-practice violations.
+- `make security`: Scan for potential secrets or sensitive patterns.
+- `make test`: Perform a dry-run syntax check on all bash scripts.
+
+### Git Hooks & CI/CD
+- **Pre-push Hook**: A local git hook is installed to run `make lint` and `make test` automatically before every push.
+- **GitHub Actions**: Every push or pull request to the `main` branch triggers an automated CI pipeline to verify code quality.
+
 ## TODO
 - [ ] Implement `k8s-controlplane` and `k8s-node` installation logic.
 - [ ] Add support for LVM, BTRFS, and LUKS encryption in `lib/partition.sh`.
