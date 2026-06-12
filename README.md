@@ -55,6 +55,10 @@ cd hippoarch
 - [ ] Expand the `workstation` role with GUI and developer-specific packages.
 - [ ] Add a `common/network.sh` for standardizing static IPs or wireless setup.
 - [ ] Implement a validation check for the `DISK` variable in `bootstrap.sh` to prevent accidental data loss.
+- [ ] Add functional tests using QEMU/KVM to verify `bootstrap.sh` in a virtual environment.
+- [ ] Integrate `shfmt` into the CI pipeline for consistent script formatting.
+- [ ] Add a "Dry Run" mode to `provision.sh` to preview changes without applying them.
+
 
 ## References
 - [Arch Wiki: Lm_sensors](https://wiki.archlinux.org/title/Lm_sensors)

@@ -1,0 +1,30 @@
+name: HippoArch CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          ignore: profiles
+
+      - name: Basic Security Scan
+        run: |
+          grep -rE "PASSWORD|SECRET|KEY|TOKEN" . --exclude-dir=.git --exclude=Makefile || echo "No sensitive keywords found."
+
+      - name: Syntax Check
+        run: |
+          bash -n bootstrap.sh
+          bash -n provision.sh
+          bash -n common/base.sh
+          bash -n lib/partition.sh
