@@ -1,0 +1,25 @@
+# Secrets & Credentials
+*.env
+*.secret
+secrets/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE backups
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Local/Transient data
+logs/
+temp/
+*.iso
+*.img
+
+# Specific to HippoArch
+# If you create local profiles that shouldn't be shared:
+# profiles/local-*.conf
