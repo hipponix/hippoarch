@@ -54,7 +54,6 @@ if [[ "$confirm" != "yes" ]]; then
     exit 1
 fi
 
-
 echo "=== Arch Linux Bootstrap: $HOSTNAME ==="
 
 # 2. Disk Setup (Modular)
