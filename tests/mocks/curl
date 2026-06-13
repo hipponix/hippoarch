@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+echo "curl $*" >> "${CALL_LOG:-/dev/null}"
+
+# Extract -o output path from args
+outfile=""
+prev=""
+for arg in "$@"; do
+    [[ "$prev" == "-o" ]] && outfile="$arg"
+    prev="$arg"
+done
+
+if [[ -n "$outfile" ]]; then
+    mkdir -p "$(dirname "$outfile")"
+    echo "# mock downloaded: $outfile" > "$outfile"
+    exit 0
+fi
+
+# GitHub API profile listing — one entry per line to match real GitHub API format
+# (grep + sed in bootstrap.sh processes line-by-line)
+if [[ "$*" == *"contents/profiles"* ]]; then
+    printf '{"name": "server-cwwk.conf", "type": "file"}\n{"name": "workstation.conf", "type": "file"}\n'
+fi
+
+exit 0

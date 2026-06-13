@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "chattr $*" >> "${CALL_LOG:-/dev/null}"
+exit 0

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "genfstab $*" >> "${CALL_LOG:-/dev/null}"
+exit 0
