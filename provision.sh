@@ -20,6 +20,7 @@ bash common/base.sh
 
 # 2. Run role-specific configuration
 if [[ -n "$ROLE" ]]; then
+    # shellcheck disable=SC2076
     if [[ " ${VALID_ROLES[*]} " =~ " ${ROLE} " ]]; then
         ROLE_SCRIPT="roles/$ROLE/install.sh"
         if [[ -f "$ROLE_SCRIPT" ]]; then

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+echo "=== pre-push: running checks ==="
+make lint
+make security
+make test-syntax
+echo "=== all checks passed ==="

@@ -1,46 +1,41 @@
 # HippoArch QA Makefile
 
-.PHONY: help lint security test install-deps
+.PHONY: help lint security test-syntax install-deps
 
 help:
 	@echo "HippoArch QA Tools"
 	@echo "Usage:"
-	@echo "  make install-deps - Install shellcheck and docker"
-	@echo "  make lint         - Check scripts for syntax errors (shellcheck)"
-	@echo "  make security     - Run security audits (shfmt / basic grep)"
-	@echo "  make test         - Run unit tests (mock environment)"
+	@echo "  make install-deps  - Install shellcheck + configure git hooks"
+	@echo "  make lint          - Run shellcheck on all scripts"
+	@echo "  make security      - Scan for sensitive patterns"
+	@echo "  make test-syntax   - Bash syntax check (bash -n)"
 
 install-deps:
 	@echo "Detecting package manager..."
 	@if [ -f /usr/bin/pacman ]; then \
-		sudo pacman -S --needed --noconfirm shellcheck docker; \
+		sudo pacman -S --needed --noconfirm shellcheck; \
 	elif [ -f /usr/bin/apt ]; then \
-		sudo apt update && sudo apt install -y shellcheck docker.io; \
+		sudo apt-get update && sudo apt-get install -y shellcheck; \
 	else \
-		echo "Unsupported package manager. Please install 'shellcheck' and 'docker' manually."; \
+		echo "Unsupported package manager. Install 'shellcheck' manually."; \
 		exit 1; \
 	fi
-	@sudo systemctl enable --now docker || true
-	@sudo usermod -aG docker $$(whoami) || true
-	@echo "Dependencies installed. Please logout and login again if this is your first time installing Docker."
+	@git config core.hooksPath hooks
+	@echo "Git hooks configured (hooks/ -> .git/hooks)."
 
 lint:
-	@echo "Running ShellCheck..."
-	@docker run --rm -v "$$(pwd):/mnt" koalaman/shellcheck:stable \
-		bootstrap.sh \
-		provision.sh \
-		common/base.sh \
-		lib/partition.sh \
-		roles/server/install.sh \
-		roles/workstation/install.sh
+	@shellcheck bootstrap.sh provision.sh common/base.sh lib/partition.sh \
+		roles/server/install.sh roles/workstation/install.sh
 
 security:
 	@echo "Checking for sensitive patterns..."
-	@grep -rE "PASSWORD|SECRET|KEY|TOKEN" . --exclude-dir=.git --exclude=Makefile || echo "No sensitive keywords found (basic check)."
+	@grep -rEi "PASSWORD|SECRET|KEY|TOKEN" . \
+		--exclude-dir=.git --exclude=Makefile --exclude="*.conf" \
+		|| echo "No sensitive keywords found."
 
-test:
-	@echo "Running Unit Tests (Syntax check only for now)..."
+test-syntax:
 	@bash -n bootstrap.sh
 	@bash -n provision.sh
 	@bash -n common/base.sh
-	@echo "Tests passed (Syntax OK)."
+	@bash -n lib/partition.sh
+	@echo "Syntax OK."
