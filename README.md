@@ -1,31 +1,10 @@
 # HippoArch
 
-Personal automation toolkit for Arch Linux installs on my bare-metal hardware — primarily a CWWK 8-bay NAS/server board. No Ansible, no complex state management — just shell scripts with a clear two-phase model and a profile per machine.
+These are my personal notes and scripts for configuring my local Arch Linux workstations and servers.
 
-## How it works
+I built this because I found myself repeating the same installation and configuration steps over and over — especially when setting up new hardware like my CWWK 8-bay motherboard. I wanted a way to automate the process without the complexity and extra layers of Ansible or other heavy configuration management frameworks.
 
-```mermaid
-flowchart LR
-    subgraph Phase1["Phase 1 — Live ISO"]
-        A([Boot ISO]) --> B[bootstrap.sh]
-        B --> C{Layout?}
-        C -- simple --> D[EFI + ext4]
-        C -- btrfs  --> E[EFI + btrfs subvols]
-        D & E --> F[pacstrap]
-        F --> G[arch-chroot config]
-        G --> H["/mnt/etc/hippoarch.conf"]
-    end
-    subgraph Phase2["Phase 2 — Installed system"]
-        I([Reboot]) --> J[provision.sh]
-        J --> K[common/base.sh]
-        K --> L{Role?}
-        L -- server      --> M[roles/server/install.sh]
-        L -- workstation --> N[roles/workstation/install.sh]
-        L -- k8s-*       --> O[roles/k8s-*/install.sh]
-        M & N & O --> P([Done])
-    end
-    H --> I
-```
+I'm sharing these notes here in the hope that they might be helpful to anyone else looking for a simple, zero-dependency way to manage their Arch fleet.
 
 ## Directory structure
 
@@ -51,98 +30,136 @@ hippoarch/
     └── integration/run.sh  # QEMU end-to-end test
 ```
 
-## Partition layouts
-
-```mermaid
-flowchart TD
-    subgraph Simple["layout_simple (EFI + ext4)"]
-        S_DISK([disk]) --> S1[sgdisk: GPT]
-        S1 --> S2["Part 1 ef00 EFI 512M — FAT32"]
-        S1 --> S3["Part 2 8304 root — ext4"]
-        S2 --> S4["/boot"]
-        S3 --> S5["/mnt"]
-    end
-    subgraph Btrfs["layout_btrfs (EFI + btrfs subvols)"]
-        B_DISK([disk]) --> B1[sgdisk: GPT]
-        B1 --> B2["Part 1 ef00 EFI 512M — FAT32"]
-        B1 --> B3["Part 2 8304 root — btrfs"]
-        B3 --> B4["@ → /mnt"]
-        B3 --> B5["@home → /mnt/home"]
-        B3 --> B6["@snapshots → /mnt/.snapshots"]
-        B3 --> B7["@var_log → /mnt/var/log"]
-        B3 --> B8["@docker → /mnt/var/lib/docker"]
-    end
-```
-
-## Profile lifecycle
-
-```mermaid
-flowchart LR
-    A(["profiles/*.conf"]) -- "source PROFILE" --> B[bootstrap.sh]
-    B -- "chattr +i" --> C["/etc/hippoarch.conf"]
-    C -- "source" --> D[provision.sh]
-    D -- "chattr -i → sed → chattr +i" --> C
-    C -- inspect --> E([audit / re-provision])
-```
-
-## Role dependency tree
-
-```mermaid
-flowchart TD
-    A([provision.sh]) --> B[common/base.sh]
-    B --> C{ROLE}
-    C --> D["server/install.sh"]
-    C --> E["workstation/install.sh"]
-    C --> F["k8s-controlplane/install.sh"]
-    C --> G["k8s-node/install.sh"]
-
-    classDef done fill:#2e7d32,color:#fff
-    classDef wip  fill:#f57f17,color:#fff
-    classDef stub fill:#424242,color:#ccc
-    class D done
-    class E wip
-    class F,G stub
-```
-
-## CI pipeline
-
-```mermaid
-flowchart LR
-    A([push / PR]) --> B[actions/checkout]
-    B --> C[Install ShellCheck]
-    C --> D[make lint]
-    D --> E[make security]
-    E --> F[make test-syntax]
-    F --> G{Pass?}
-    G -- yes --> H([green])
-    G -- no  --> I([blocked])
-```
-
 ## Installation
 
 ### Phase 1 — Bootstrap (Live ISO)
 
-```bash
-curl -LO https://raw.githubusercontent.com/hipponix/hippoarch/main/bootstrap.sh
+```mermaid
+flowchart LR
+    classDef user fill:#2E86C1,stroke:#1A5276,color:#fff
+    classDef auto fill:#1E8449,stroke:#145A32,color:#fff
 
-# Optional helpers (no install triggered)
-bash bootstrap.sh --detect          # show CPU / disk / RAM
-bash bootstrap.sh --list            # list profiles in the repo
-bash bootstrap.sh --fetch server-cwwk.conf
+    User(["User"]):::user
 
-# Full install
-bash bootstrap.sh profiles/server-cwwk.conf
+    subgraph usteps["Manual (User)"]
+        direction TB
+        L1["1. curl -LO\n.../bootstrap.sh"]:::user
+        L2["2. bash bootstrap.sh --list"]:::user
+        L3["3. bash bootstrap.sh\n--fetch &lt;profile&gt;"]:::user
+        L4["4. vim profiles/server-cwwk.conf"]:::user
+        L5["5. bash bootstrap.sh &lt;profile&gt;"]:::user
+        L1 --> L2 --> L3 --> L4 --> L5
+    end
+
+    subgraph asteps["Automation (bootstrap.sh)"]
+        direction TB
+        B1["6. Validate disk & confirm wipe"]:::auto
+        B2["7. Partition & format\nEFI + ROOT"]:::auto
+        B3["8. Install base system"]:::auto
+        B4["9. Apply base configuration"]:::auto
+        B5["10. Download provision.sh\nto user $HOME"]:::auto
+        B1 --> B2 --> B3 --> B4 --> B5
+    end
+
+    Reboot(["Reboot"]):::user
+
+    User --> usteps --> asteps --> Reboot
 ```
 
-The script validates the disk is a block device and requires you to type `yes` before touching it.
+*Manual (User):*
+
+1. Download the bootstrap script from the GitHub repo.
+   ```bash
+   curl -LO https://raw.githubusercontent.com/hipponix/hippoarch/main/bootstrap.sh
+   ```
+2. Print all available profiles to pick the right one for your hardware.
+   ```bash
+   bash bootstrap.sh --list
+   ```
+3. Download the selected profile and `lib/partition.sh` locally without running anything.
+   ```bash
+   bash bootstrap.sh --fetch profiles/server-cwwk.conf
+   ```
+4. Open the `.conf` file and set `DISK`, `HOSTNAME`, `USERNAME`, `ROOT_PASSWORD`, `USER_PASSWORD`, `TIMEZONE`, `LOCALE`, and `LAYOUT`. The script aborts if passwords are left as `changeme`.
+   ```bash
+   vim profiles/server-cwwk.conf
+   ```
+5. Source the profile and start the automated installation.
+   ```bash
+   bash bootstrap.sh profiles/server-cwwk.conf
+   ```
+
+*Automation (bootstrap.sh):*
+
+6. Check that `DISK` is a valid block device and require explicit `yes` confirmation before any write.
+7. Create a GPT table with a 512 MB EFI partition and a root partition, and format them as FAT32 and ext4 or btrfs respectively.
+8. Install the base Arch packages into `/mnt`.
+9. Enter the new system and apply the base configuration.
+10. Download `provision.sh` to the user `$HOME` directory, ready to run after reboot.
+
+### Bootstrap options reference
+
+| Option | Description |
+|--------|-------------|
+| `--version` | Print the current HippoArch version |
+| `--detect` | Show CPU, disk, and RAM info for the current machine |
+| `--list` | List available profiles from the GitHub repo |
+| `--fetch-all` | Download all profiles and `lib/partition.sh` locally |
+| `--fetch <profile>` | Download a single profile and `lib/partition.sh` without running |
+| `<profile>` | Run the full bootstrap using the given profile |
 
 ### Phase 2 — Provisioning (post-reboot)
 
-```bash
-cd hippoarch
-./provision.sh          # reads ROLE from /etc/hippoarch.conf
-./provision.sh server   # or override via CLI
+```mermaid
+flowchart LR
+    classDef user    fill:#2E86C1,stroke:#1A5276,color:#fff
+    classDef auto    fill:#1E8449,stroke:#145A32,color:#fff
+    classDef outcome fill:#6C3483,stroke:#4A235A,color:#fff
+
+    User(["User"]):::user
+
+    subgraph msteps["Manual (User)"]
+        direction TB
+        M1["1. Login as USERNAME"]:::user
+        M2["2. cd hippoarch"]:::user
+        M3["3. ./provision.sh"]:::user
+        M1 --> M2 --> M3
+    end
+
+    subgraph asteps["Automation (provision.sh)"]
+        direction TB
+        P1["4. Install base packages"]:::auto
+        P2["5. Configure hardware\n& sensors"]:::auto
+        P3["6. Deploy dotfiles"]:::auto
+        P4["7. Apply role\nconfiguration"]:::auto
+        P1 --> P2 --> P3 --> P4
+    end
+
+    Ready[/"System ready"/]:::outcome
+
+    User --> msteps --> asteps --> Ready
 ```
+
+> **Legend:** blue = user action &nbsp;·&nbsp; green = automated by script &nbsp;·&nbsp; purple = final state
+
+*Manual (User):*
+
+1. Login to the machine as USERNAME after reboot.
+2. Navigate to the hippoarch directory.
+   ```bash
+   cd hippoarch
+   ```
+3. Run `provision.sh` — it reads `ROLE` from `/etc/hippoarch.conf`, written during bootstrap.
+   ```bash
+   ./provision.sh
+   ```
+
+*Automation (provision.sh):*
+
+4. Install the base packages defined in `common/base.sh`.
+5. Load the IT87 hardware driver and enable sensor monitoring via `lm_sensors`.
+6. Copy dotfiles (`.vimrc`, `.bash_aliases`) to the user home directory.
+7. Run `roles/<role>/install.sh` to apply role-specific packages and configuration.
 
 ## Profiles
 
