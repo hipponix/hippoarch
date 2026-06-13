@@ -28,7 +28,9 @@ if [[ ! -f "$PROFILE" && "$PROFILE" != http* ]]; then
     curl -sL --create-dirs -o "$PROFILE" "$REPO_RAW_URL/$PROFILE"
 fi
 
+# shellcheck source=/dev/null
 source "$PROFILE"
+# shellcheck source=/dev/null
 source lib/partition.sh
 
 if [[ -z "$ROOT_PASSWORD" || -z "$USER_PASSWORD" ]]; then
@@ -39,6 +41,7 @@ fi
 echo "=== Arch Linux Bootstrap: $HOSTNAME ==="
 
 # 2. Disk Setup (Modular)
+# shellcheck disable=SC2153
 case $LAYOUT in
     simple)
         layout_simple "$DISK"
