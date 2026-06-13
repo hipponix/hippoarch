@@ -4,7 +4,7 @@ These are my personal notes and scripts for configuring my local Arch Linux work
 
 I built this because I found myself repeating the same installation and configuration steps over and over—especially when setting up new hardware like my CWWK 8-bay motherboard. I wanted a way to automate the process without the complexity and extra layers of Ansible or other heavy configuration management frameworks. 
 
-I'm sharing these notes here in the hope that they might be helpful to anyone else looking for a simple, zero-dependency way to manage their Arch fleet.
+I'm sharing code and notes here in case they might be helpful to anyone else looking for a simple way (with its obvious limitation) to manage their Arch installations.
 
 ## Directory Structure
 
@@ -24,13 +24,13 @@ hippoarch/
 ## Installation Steps
 
 ### 1. Bootstrap (Live ISO)
-Boot from the Arch Live ISO, download the repository, and run the bootstrap with a profile:
+Boot from the Arch Live ISO and run the bootstrap command directly:
+
 ```bash
-git clone https://github.com/hipponix/hippoarch.git
-cd hippoarch
-./bootstrap.sh profiles/server-cwwk.conf
+curl -LO https://raw.githubusercontent.com/hipponix/hippoarch/main/bootstrap.sh
+bash bootstrap.sh profiles/server-cwwk.conf
 ```
-*Note: Check `profiles/server-cwwk.conf` first to ensure the `DISK` variable is correct.*
+*Note: The script will automatically fetch the partition library and the selected profile from GitHub if they aren't found locally. Check `profiles/server-cwwk.conf` in the repo to ensure the `DISK` variable is correct for your hardware.*
 
 ### 2. Provisioning (Post-Reboot)
 After the machine reboots, login and run the role-specific setup:
