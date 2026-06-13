@@ -26,7 +26,7 @@ if [[ -d "/etc/modprobe.d" ]]; then
 fi
 
 echo "Probing sensors..."
-sudo sensors-detect --auto > /dev/null 2>&1
+sudo sensors-detect --auto 2>&1 | grep -E "^(Found|Loaded|error)" || true
 sudo systemctl enable --now lm_sensors
 
 echo "Deploying common dotfiles..."
