@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "mkfs.ext4 $*" >> "${CALL_LOG:-/dev/null}"
+exit 0

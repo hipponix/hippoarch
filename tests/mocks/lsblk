@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+echo "lsblk $*" >> "${CALL_LOG:-/dev/null}"
+if [[ "$*" == *"-d"* ]]; then
+    printf 'NAME     SIZE MODEL                TYPE\nsda      100G HIPPOARCH-MOCK-DISK  disk\n'
+fi
+exit 0
