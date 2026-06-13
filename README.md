@@ -13,7 +13,7 @@ flowchart LR
         C -- btrfs  --> E[EFI + btrfs subvols]
         D & E --> F[pacstrap]
         F --> G[arch-chroot config]
-        G --> H[/mnt/etc/hippoarch.conf]
+        G --> H["/mnt/etc/hippoarch.conf"]
     end
     subgraph Phase2["Phase 2 — Installed system"]
         I([Reboot]) --> J[provision.sh]
@@ -57,20 +57,20 @@ hippoarch/
 flowchart TD
     subgraph Simple["layout_simple (EFI + ext4)"]
         S_DISK([disk]) --> S1[sgdisk: GPT]
-        S1 --> S2["Part 1 — ef00 EFI 512M\nmkfs.fat -F32"]
-        S1 --> S3["Part 2 — 8304 Linux root\nmkfs.ext4"]
-        S2 --> S4["/boot mount"]
-        S3 --> S5["/mnt mount"]
+        S1 --> S2["Part 1 ef00 EFI 512M — FAT32"]
+        S1 --> S3["Part 2 8304 root — ext4"]
+        S2 --> S4["/boot"]
+        S3 --> S5["/mnt"]
     end
     subgraph Btrfs["layout_btrfs (EFI + btrfs subvols)"]
         B_DISK([disk]) --> B1[sgdisk: GPT]
-        B1 --> B2["Part 1 — ef00 EFI 512M\nmkfs.fat -F32"]
-        B1 --> B3["Part 2 — 8304 Linux root\nmkfs.btrfs"]
-        B3 --> B4["@ /mnt"]
-        B3 --> B5["@home /mnt/home"]
-        B3 --> B6["@snapshots /mnt/.snapshots"]
-        B3 --> B7["@var_log /mnt/var/log"]
-        B3 --> B8["@docker /mnt/var/lib/docker"]
+        B1 --> B2["Part 1 ef00 EFI 512M — FAT32"]
+        B1 --> B3["Part 2 8304 root — btrfs"]
+        B3 --> B4["@ → /mnt"]
+        B3 --> B5["@home → /mnt/home"]
+        B3 --> B6["@snapshots → /mnt/.snapshots"]
+        B3 --> B7["@var_log → /mnt/var/log"]
+        B3 --> B8["@docker → /mnt/var/lib/docker"]
     end
 ```
 
@@ -78,8 +78,8 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A([profiles/*.conf]) -- "source \$PROFILE" --> B[bootstrap.sh]
-    B -- "chattr +i" --> C[/etc/hippoarch.conf]
+    A(["profiles/*.conf"]) -- "source PROFILE" --> B[bootstrap.sh]
+    B -- "chattr +i" --> C["/etc/hippoarch.conf"]
     C -- "source" --> D[provision.sh]
     D -- "chattr -i → sed → chattr +i" --> C
     C -- inspect --> E([audit / re-provision])
@@ -91,10 +91,10 @@ flowchart LR
 flowchart TD
     A([provision.sh]) --> B[common/base.sh]
     B --> C{ROLE}
-    C --> D[server/install.sh]
-    C --> E[workstation/install.sh]
-    C --> F[k8s-controlplane/install.sh]
-    C --> G[k8s-node/install.sh]
+    C --> D["server/install.sh"]
+    C --> E["workstation/install.sh"]
+    C --> F["k8s-controlplane/install.sh"]
+    C --> G["k8s-node/install.sh"]
 
     classDef done fill:#2e7d32,color:#fff
     classDef wip  fill:#f57f17,color:#fff
