@@ -38,6 +38,23 @@ if [[ -z "$ROOT_PASSWORD" || -z "$USER_PASSWORD" ]]; then
     exit 1
 fi
 
+# Validate disk is a block device before any destructive action
+# shellcheck disable=SC2153
+if [[ ! -b "$DISK" ]]; then
+    echo "Error: '$DISK' is not a block device."
+    exit 1
+fi
+
+echo "Target disk:"
+lsblk -d "$DISK"
+echo ""
+read -rp "WARNING: All data on $DISK will be erased. Type 'yes' to continue: " confirm
+if [[ "$confirm" != "yes" ]]; then
+    echo "Aborted."
+    exit 1
+fi
+
+
 echo "=== Arch Linux Bootstrap: $HOSTNAME ==="
 
 # 2. Disk Setup (Modular)
