@@ -31,6 +31,11 @@ fi
 source "$PROFILE"
 source lib/partition.sh
 
+if [[ -z "$ROOT_PASSWORD" || -z "$USER_PASSWORD" ]]; then
+    echo "Error: ROOT_PASSWORD and USER_PASSWORD must be set in the profile."
+    exit 1
+fi
+
 echo "=== Arch Linux Bootstrap: $HOSTNAME ==="
 
 # 2. Disk Setup (Modular)
@@ -74,11 +79,11 @@ echo "LANG=$LOCALE" > /etc/locale.conf
 echo "$HOSTNAME" > /etc/hostname
 
 # Root password
-echo "root:password" | chpasswd
+echo "root:$ROOT_PASSWORD" | chpasswd
 
 # Create User
 useradd -m -G wheel "$USERNAME"
-echo "$USERNAME:password" | chpasswd
+echo "$USERNAME:$USER_PASSWORD" | chpasswd
 echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
 
 # Bootloader (GRUB)
