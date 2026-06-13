@@ -3,17 +3,82 @@
 # HippoArch - Bootstrap Script (Live ISO)
 set -e
 
-PROFILE=$1
+HIPPOARCH_VERSION=$(cat "$(dirname "$0")/VERSION" 2>/dev/null || echo "dev")
+REPO_RAW_URL="https://raw.githubusercontent.com/hipponix/hippoarch/main"
+REPO_TAR_URL="https://github.com/hipponix/hippoarch/tarball/main"
+REPO_API_URL="https://api.github.com/repos/hipponix/hippoarch/contents"
 
-if [[ -z "$PROFILE" || ! -f "$PROFILE" ]]; then
+detect_hardware() {
+    echo "=== Hardware Detection ==="
+    lscpu | grep -E "^(Model name|CPU\(s\)|Thread|Core)"
+    lsblk -d -o NAME,SIZE,MODEL | grep -v "^loop"
+    free -h | grep Mem
+}
+
+list_profiles() {
+    echo "=== Available Profiles ==="
+    curl -s "$REPO_API_URL/profiles" \
+        | grep '"name"' \
+        | sed 's/.*"name": "\(.*\)".*/\1/' \
+        | grep '\.conf$'
+}
+
+fetch_all() {
+    echo "=== Fetching All Profiles ==="
+    local profiles
+    profiles=$(curl -s "$REPO_API_URL/profiles" \
+        | grep '"name"' \
+        | sed 's/.*"name": "\(.*\)".*/\1/' \
+        | grep '\.conf$')
+    mkdir -p profiles
+    while IFS= read -r name; do
+        echo "Fetching $name..."
+        curl -sL -o "profiles/$name" "$REPO_RAW_URL/profiles/$name"
+    done <<< "$profiles"
+    echo "Done. Profiles saved to profiles/"
+}
+
+case "${1:-}" in
+    --version)
+        echo "HippoArch $HIPPOARCH_VERSION"
+        exit 0
+        ;;
+    --detect)
+        detect_hardware
+        exit 0
+        ;;
+    --list)
+        list_profiles
+        exit 0
+        ;;
+    --fetch-all)
+        fetch_all
+        exit 0
+        ;;
+    --fetch)
+        [[ -z "${2:-}" ]] && { echo "Usage: $0 --fetch <profile_name>"; exit 1; }
+        mkdir -p profiles
+        curl -sL -o "profiles/$2" "$REPO_RAW_URL/profiles/$2"
+        echo "Fetched to profiles/$2"
+        exit 0
+        ;;
+esac
+
+PROFILE=${1:-}
+FETCH_ONLY=${FETCH_ONLY:-0}
+
+if [[ -z "$PROFILE" ]]; then
     echo "Usage: $0 <profile_path>"
+    echo "       $0 --version"
+    echo "       $0 --detect"
+    echo "       $0 --list"
+    echo "       $0 --fetch-all"
+    echo "       $0 --fetch <profile_name>"
     echo "Example: $0 profiles/server-cwwk.conf"
     exit 1
 fi
 
 # 1. Load Profile and Libraries
-REPO_RAW_URL="https://raw.githubusercontent.com/hipponix/hippoarch/main"
-REPO_TAR_URL="https://github.com/hipponix/hippoarch/tarball/main"
 
 # Fetch partition library if missing
 if [[ ! -f "lib/partition.sh" ]]; then
@@ -26,6 +91,11 @@ fi
 if [[ ! -f "$PROFILE" && "$PROFILE" != http* ]]; then
     echo "Profile '$PROFILE' not found locally, fetching from repo..."
     curl -sL --create-dirs -o "$PROFILE" "$REPO_RAW_URL/$PROFILE"
+fi
+
+if [[ "$FETCH_ONLY" == "1" ]]; then
+    echo "Fetched: $PROFILE"
+    exit 0
 fi
 
 # shellcheck source=/dev/null
