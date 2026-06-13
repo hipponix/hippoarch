@@ -12,6 +12,22 @@ if [[ -z "$PROFILE" || ! -f "$PROFILE" ]]; then
 fi
 
 # 1. Load Profile and Libraries
+REPO_RAW_URL="https://raw.githubusercontent.com/hipponix/hippoarch/main"
+REPO_TAR_URL="https://github.com/hipponix/hippoarch/tarball/main"
+
+# Fetch partition library if missing
+if [[ ! -f "lib/partition.sh" ]]; then
+    echo "Fetching partition library from repo..."
+    mkdir -p lib
+    curl -sL -o lib/partition.sh "$REPO_RAW_URL/lib/partition.sh"
+fi
+
+# Fetch profile if missing locally
+if [[ ! -f "$PROFILE" && "$PROFILE" != http* ]]; then
+    echo "Profile '$PROFILE' not found locally, fetching from repo..."
+    curl -sL --create-dirs -o "$PROFILE" "$REPO_RAW_URL/$PROFILE"
+fi
+
 source "$PROFILE"
 source lib/partition.sh
 
@@ -22,6 +38,9 @@ case $LAYOUT in
     simple)
         layout_simple "$DISK"
         ;;
+    btrfs)
+        layout_btrfs "$DISK"
+        ;;
     *)
         echo "Error: Unknown layout '$LAYOUT'"
         exit 1
@@ -30,7 +49,10 @@ esac
 
 # 3. Base Installation
 echo "Installing base system..."
-pacstrap /mnt base linux linux-firmware git vim sudo
+BASE_PKGS=(base linux linux-firmware vim sudo curl)
+[[ "$LAYOUT" == "btrfs" ]] && BASE_PKGS+=(btrfs-progs)
+
+pacstrap /mnt "${BASE_PKGS[@]}"
 
 # 4. Generate FSTAB
 echo "Generating fstab..."
@@ -64,9 +86,11 @@ pacman -S --noconfirm grub efibootmgr
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
 
-# Clone HippoArch for post-install
+# Download HippoArch for post-install
+echo "Downloading HippoArch for post-install..."
 cd /home/$USERNAME
-git clone https://github.com/hipponix/hippoarch.git
+mkdir hippoarch
+curl -L "$REPO_TAR_URL" | tar -xz -C hippoarch --strip-components=1
 chown -R $USERNAME:$USERNAME hippoarch
 EOF
 
