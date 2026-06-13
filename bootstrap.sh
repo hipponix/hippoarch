@@ -147,6 +147,11 @@ esac
 echo "Installing base system..."
 BASE_PKGS=(base linux linux-firmware vim sudo curl)
 [[ "$LAYOUT" == "btrfs" ]] && BASE_PKGS+=(btrfs-progs)
+# shellcheck disable=SC2206
+[[ -n "${EXTRA_PACKAGES:-}" ]] && BASE_PKGS+=($EXTRA_PACKAGES)
+
+ENABLE_SSHD=0
+[[ " ${BASE_PKGS[*]} " =~ " openssh " ]] && ENABLE_SSHD=1
 
 pacstrap /mnt "${BASE_PKGS[@]}"
 
@@ -176,6 +181,9 @@ echo "root:$ROOT_PASSWORD" | chpasswd
 useradd -m -G wheel "$USERNAME"
 echo "$USERNAME:$USER_PASSWORD" | chpasswd
 echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
+
+# Optional services
+[[ "$ENABLE_SSHD" == "1" ]] && systemctl enable sshd
 
 # Bootloader (GRUB)
 pacman -S --noconfirm grub efibootmgr
