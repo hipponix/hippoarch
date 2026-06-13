@@ -5,7 +5,14 @@
 
 set -e
 
-ROLE=$1
+PROVISION_START=$(date +%s)
+
+if [[ -f /etc/hippoarch.conf ]]; then
+    # shellcheck source=/dev/null
+    source /etc/hippoarch.conf
+fi
+
+ROLE=${1:-${ROLE:-}}
 VALID_ROLES=("workstation" "k8s-controlplane" "k8s-node" "server")
 
 usage() {
@@ -39,4 +46,13 @@ else
     echo "Available roles: ${VALID_ROLES[*]}"
 fi
 
-echo "=== Setup Finished ==="
+PROVISION_ELAPSED=$(( $(date +%s) - PROVISION_START ))
+PROVISION_TIME="$((PROVISION_ELAPSED / 60))m $((PROVISION_ELAPSED % 60))s"
+
+if [[ -f /etc/hippoarch.conf ]]; then
+    chattr -i /etc/hippoarch.conf
+    sed -i "s|^PROVISION_TIME=.*|PROVISION_TIME=\"$PROVISION_TIME\"|" /etc/hippoarch.conf
+    chattr +i /etc/hippoarch.conf
+fi
+
+echo "=== Setup Finished (${PROVISION_TIME}) ==="

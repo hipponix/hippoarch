@@ -124,6 +124,8 @@ if [[ "$confirm" != "yes" ]]; then
     exit 1
 fi
 
+BOOTSTRAP_START=$(date +%s)
+
 echo "=== Arch Linux Bootstrap: $HOSTNAME ==="
 
 # 2. Disk Setup (Modular)
@@ -188,5 +190,14 @@ curl -L "$REPO_TAR_URL" | tar -xz -C hippoarch --strip-components=1
 chown -R $USERNAME:$USERNAME hippoarch
 EOF
 
-echo "=== Bootstrap Complete ==="
+# Write install record and lock it
+cat > /mnt/etc/hippoarch.conf <<HICONF
+ROLE="${ROLE:-}"
+PROVISION_TIME=""
+HICONF
+chattr +i /mnt/etc/hippoarch.conf
+
+BOOTSTRAP_ELAPSED=$(( $(date +%s) - BOOTSTRAP_START ))
+BOOTSTRAP_TIME="$((BOOTSTRAP_ELAPSED / 60))m $((BOOTSTRAP_ELAPSED % 60))s"
+echo "=== Bootstrap Complete (${BOOTSTRAP_TIME}) ==="
 echo "Reboot, then login as $USERNAME and run: cd hippoarch && ./provision.sh [role]"
