@@ -7,6 +7,7 @@ layout_simple() {
     echo "Using Simple GPT layout on $disk..."
 
     # 1. Partitioning
+    # GPT type codes: ef00 = EFI System Partition, 8304 = Linux x86-64 root
     sgdisk -Z "$disk"
     sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI" "$disk"
     sgdisk -n 2:0:0     -t 2:8304 -c 2:"ROOT" "$disk"
@@ -37,6 +38,7 @@ layout_btrfs() {
     echo "Using Btrfs layout on $disk..."
 
     # 1. Partitioning
+    # GPT type codes: ef00 = EFI System Partition, 8304 = Linux x86-64 root
     sgdisk -Z "$disk"
     sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI" "$disk"
     sgdisk -n 2:0:0     -t 2:8304 -c 2:"ROOT" "$disk"
