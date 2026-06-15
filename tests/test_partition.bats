@@ -102,3 +102,16 @@ teardown() {
     layout_btrfs "/dev/nvme0n1"
     call_was_made "mkfs.btrfs.*nvme0n1p2$"
 }
+
+@test "layout_simple uses 'p' suffix for loop device" {
+    source "$TEST_DIR/lib/partition.sh"
+    layout_simple "/dev/loop0"
+    call_was_made "mkfs.fat.*loop0p1$"
+    call_was_made "mkfs.ext4.*loop0p2$"
+}
+
+@test "layout_btrfs uses 'p' suffix for loop device" {
+    source "$TEST_DIR/lib/partition.sh"
+    layout_btrfs "/dev/loop0"
+    call_was_made "mkfs.btrfs.*loop0p2$"
+}

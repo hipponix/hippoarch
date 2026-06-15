@@ -17,9 +17,9 @@ teardown() {
 # --- Role detection ---
 
 @test "reads ROLE from /etc/hippoarch.conf" {
-    # conf has ROLE=server; provision.sh must log the server role stub
+    # conf has ROLE=server-cwwk; provision.sh must log the server-cwwk role stub
     (cd "$TEST_DIR" && run bash provision.sh)
-    [[ "$output" == *"role server stub"* ]]
+    [[ "$output" == *"role server-cwwk stub"* ]]
 }
 
 @test "CLI arg overrides ROLE from conf" {

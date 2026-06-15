@@ -13,7 +13,7 @@ if [[ -f /etc/hippoarch.conf ]]; then
 fi
 
 ROLE=${1:-${ROLE:-}}
-VALID_ROLES=("workstation" "k8s-controlplane" "k8s-node" "server")
+VALID_ROLES=("workstation" "server-cwwk" "server-k8s-master" "server-k8s-node")
 
 usage() {
     echo "Usage: $0 [role]"

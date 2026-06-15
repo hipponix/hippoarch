@@ -13,10 +13,10 @@ layout_simple() {
     sgdisk -n 2:0:0     -t 2:8304 -c 2:"ROOT" "$disk"
 
     # 2. Formatting
-    # Handle different naming conventions (sda1 vs nvme0n1p1)
+    # Handle different naming conventions (sda1 vs nvme0n1p1 vs loop0p1)
     local p1="${disk}1"
     local p2="${disk}2"
-    if [[ $disk == *nvme* ]] || [[ $disk == *mmcblk* ]]; then
+    if [[ $disk == *nvme* ]] || [[ $disk == *mmcblk* ]] || [[ $disk == *loop* ]]; then
         p1="${disk}p1"
         p2="${disk}p2"
     fi
@@ -46,7 +46,7 @@ layout_btrfs() {
     # 2. Formatting
     local p1="${disk}1"
     local p2="${disk}2"
-    if [[ $disk == *nvme* ]] || [[ $disk == *mmcblk* ]]; then
+    if [[ $disk == *nvme* ]] || [[ $disk == *mmcblk* ]] || [[ $disk == *loop* ]]; then
         p1="${disk}p1"
         p2="${disk}p2"
     fi

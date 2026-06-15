@@ -19,10 +19,10 @@ hippoarch/
 │   ├── base.sh             # Packages, sensors, dotfiles — all machines
 │   └── dotfiles/           # .vimrc, .bash_aliases
 ├── roles/
-│   ├── server/install.sh
-│   ├── workstation/install.sh
-│   ├── k8s-controlplane/install.sh
-│   └── k8s-node/install.sh
+│   ├── server-cwwk/install.sh
+│   ├── server-k8s-master/install.sh
+│   ├── server-k8s-node/install.sh
+│   └── workstation/install.sh
 └── tests/
     ├── helpers.bash
     ├── mocks/              # 18 mock scripts (log calls, exit 0)
@@ -175,7 +175,7 @@ A profile is a `.conf` file sourced into `bootstrap.sh`. Required fields:
 | `TIMEZONE` | `Europe/Rome` | |
 | `LOCALE` | `en_US.UTF-8` | |
 | `LAYOUT` | `simple` or `btrfs` | |
-| `ROLE` | `server` | Written to `/etc/hippoarch.conf` |
+| `ROLE` | `server-cwwk` | Written to `/etc/hippoarch.conf` |
 | `EXTRA_PACKAGES` | `"openssh htop"` | Space-separated, optional |
 
 ## Quality assurance

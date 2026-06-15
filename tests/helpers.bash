@@ -21,7 +21,7 @@ setup_test_env() {
 
     # Stub all valid roles
     local role
-    for role in server workstation k8s-controlplane k8s-node; do
+    for role in server-cwwk server-k8s-master server-k8s-node workstation; do
         mkdir -p "$TEST_DIR/roles/$role"
         printf '#!/bin/bash\necho "=== role %s stub ==="\n' "$role" \
             > "$TEST_DIR/roles/$role/install.sh"
@@ -44,7 +44,7 @@ USER_PASSWORD="securepassword2"
 TIMEZONE="UTC"
 LOCALE="en_US.UTF-8"
 LAYOUT="simple"
-ROLE="server"
+ROLE="server-cwwk"
 EOF
 }
 
@@ -56,7 +56,7 @@ HIPPOARCH_VERSION="0.1.0"
 INSTALL_TIMESTAMP="2026-06-13T10:00:00+00:00"
 ARCH_ISO_VERSION="2026.06.01"
 PROFILE="profiles/server-cwwk.conf"
-ROLE="server"
+ROLE="server-cwwk"
 BOOTSTRAP_TIME="5m 30s"
 PROVISION_TIME=""
 EOF

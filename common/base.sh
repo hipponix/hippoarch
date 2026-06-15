@@ -9,7 +9,6 @@ PACKAGES=(
     "git"
     "curl"
     "fastfetch"
-    "lm_sensors"
     "btop"
     "pass"
     "ripgrep"
@@ -17,17 +16,6 @@ PACKAGES=(
 
 echo "Installing base packages..."
 sudo pacman -S --needed --noconfirm --quiet "${PACKAGES[@]}"
-
-echo "Configuring hardware drivers..."
-# Load ITE Driver for IT8620 (common on these boards)
-if [[ -d "/etc/modprobe.d" ]]; then
-    echo "options it87 ignore_resource_conflict=1" | sudo tee /etc/modprobe.d/it87.conf > /dev/null
-    echo "it87" | sudo tee /etc/modules-load.d/it87.conf > /dev/null
-fi
-
-echo "Probing sensors..."
-sudo sensors-detect --auto 2>&1 | grep -E "^(Found|Loaded|error)" || true
-sudo systemctl enable --now lm_sensors
 
 echo "Deploying common dotfiles..."
 for file in .vimrc .bash_aliases; do

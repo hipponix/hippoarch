@@ -4,8 +4,8 @@
 set -e
 
 HIPPOARCH_VERSION=$(cat "$(dirname "$0")/VERSION" 2>/dev/null || echo "dev")
-REPO_RAW_URL="https://raw.githubusercontent.com/hipponix/hippoarch/main"
-REPO_TAR_URL="https://github.com/hipponix/hippoarch/tarball/main"
+REPO_RAW_URL="${HIPPOARCH_RAW_URL:-https://raw.githubusercontent.com/hipponix/hippoarch/main}"
+REPO_TAR_URL="${HIPPOARCH_TAR_URL:-https://github.com/hipponix/hippoarch/tarball/main}"
 REPO_API_URL="https://api.github.com/repos/hipponix/hippoarch/contents"
 
 detect_hardware() {
@@ -185,10 +185,36 @@ echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
 # Optional services
 [[ "$ENABLE_SSHD" == "1" ]] && systemctl enable sshd
 
+# Network (systemd-networkd with DHCP for all wired adapters)
+mkdir -p /etc/systemd/network
+cat > /etc/systemd/network/20-wired.network <<NETEOF
+[Match]
+Type=ether
+
+[Network]
+DHCP=yes
+NETEOF
+systemctl enable systemd-networkd
+
+# Don't block boot waiting for DHCP — sshd doesn't need network-online
+systemctl disable systemd-networkd-wait-online 2>/dev/null || true
+
 # Bootloader (GRUB)
 pacman -S --noconfirm grub efibootmgr
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+# Add serial console and reduce menu timeout (grub creates /etc/default/grub on install)
+sed -i 's|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0,115200"|' /etc/default/grub
+sed -i 's|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=2|' /etc/default/grub
+# --removable skips EFI variable writes (needed inside a non-UEFI chroot)
+# and creates the module tree; grub.cfg goes to /boot/grub/grub.cfg
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --removable
 grub-mkconfig -o /boot/grub/grub.cfg
+# The BOOTX64.EFI from --removable stores a prefix that OVMF cannot resolve
+# when the disk interface changes (virtio→AHCI). Replace it with a standalone
+# image that has grub.cfg embedded — no prefix search required at boot time.
+grub-mkstandalone \
+    --format=x86_64-efi \
+    --output=/boot/EFI/BOOT/BOOTX64.EFI \
+    "boot/grub/grub.cfg=/boot/grub/grub.cfg"
 
 # Download HippoArch for post-install
 echo "Downloading HippoArch for post-install..."
@@ -198,14 +224,17 @@ curl -L "$REPO_TAR_URL" | tar -xz -C hippoarch --strip-components=1
 chown -R $USERNAME:$USERNAME hippoarch
 EOF
 
+BOOTSTRAP_ELAPSED=$(( $(date +%s) - BOOTSTRAP_START ))
+BOOTSTRAP_TIME="$((BOOTSTRAP_ELAPSED / 60))m $((BOOTSTRAP_ELAPSED % 60))s"
+
 # Write install record and lock it
 cat > /mnt/etc/hippoarch.conf <<HICONF
 ROLE="${ROLE:-}"
+HIPPOARCH_VERSION="${HIPPOARCH_VERSION}"
+BOOTSTRAP_TIME="${BOOTSTRAP_TIME}"
 PROVISION_TIME=""
 HICONF
 chattr +i /mnt/etc/hippoarch.conf
 
-BOOTSTRAP_ELAPSED=$(( $(date +%s) - BOOTSTRAP_START ))
-BOOTSTRAP_TIME="$((BOOTSTRAP_ELAPSED / 60))m $((BOOTSTRAP_ELAPSED % 60))s"
 echo "=== Bootstrap Complete (${BOOTSTRAP_TIME}) ==="
 echo "Reboot, then login as $USERNAME and run: cd hippoarch && ./provision.sh [role]"
