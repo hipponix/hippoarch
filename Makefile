@@ -1,7 +1,11 @@
 # HippoArch QA Makefile
 
-.PHONY: help lint security test test-unit test-functional test-syntax test-integration install-deps
+SHELL := /bin/bash
 
+.PHONY: help lint security test test-unit test-functional test-syntax test-integration install-deps \
+        release
+
+VERSION  := $(shell cat VERSION)
 HEADLESS ?= 0
 
 help:
@@ -15,6 +19,7 @@ help:
 	@echo "  make test              - Run unit + functional tests"
 	@echo "  make test-syntax       - Bash syntax check (bash -n)"
 	@echo "  make test-integration  - Run QEMU integration test (HEADLESS=1 for headless)"
+	@echo "  make release           - Tag and push v$(VERSION), triggering the release pipeline"
 
 install-deps:
 	@echo "Detecting package manager..."
@@ -65,3 +70,27 @@ test-syntax:
 	@bash -n common/base.sh
 	@bash -n lib/partition.sh
 	@echo "Syntax OK."
+
+# ── Release ───────────────────────────────────────────────────────────────────
+
+release:
+	@set -e; \
+	git diff --quiet HEAD || { echo "Error: uncommitted changes — commit first"; exit 1; }; \
+	latest=$$(git tag --sort=-v:refname | head -1); \
+	branch=$$(git branch --show-current); \
+	echo "Branch:             $$branch"; \
+	echo "Current latest tag: $${latest:-none}"; \
+	echo "New release:        v$(VERSION)"; \
+	read -rp "Confirm? [y/N] " ans; \
+	[[ "$$ans" == "y" || "$$ans" == "Y" ]] || { echo "Aborted."; exit 1; }; \
+	if [[ "$$branch" != "main" ]]; then \
+		echo "Merging $$branch → main..."; \
+		git checkout main; \
+		git pull origin main; \
+		git merge --no-ff "$$branch" -m "release: merge $$branch for v$(VERSION)"; \
+		git push origin main; \
+	fi; \
+	echo "Tagging v$(VERSION)..."; \
+	git tag "v$(VERSION)"; \
+	git push origin "v$(VERSION)"; \
+	echo "Pipeline: https://github.com/hipponix/hippoarch/actions"
