@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package tarball
+        run: |
+          tar czf hippoarch.tar.gz \
+            --transform 's|^|hippoarch/|' \
+            bootstrap.sh provision.sh VERSION lib/ profiles/ common/ roles/
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            hippoarch.tar.gz \
+            --title "${{ github.ref_name }}" \
+            --notes "## HippoArch ${{ github.ref_name }}
+
+          Boot the Arch Linux live ISO, then:
+
+          \`\`\`bash
+          curl -LO https://github.com/hipponix/hippoarch/releases/latest/download/hippoarch.tar.gz
+          tar xzf hippoarch.tar.gz && cd hippoarch
+          bash bootstrap.sh profiles/workstation.conf
+          \`\`\`
+
+          After reboot:
+
+          \`\`\`bash
+          cd hippoarch && bash provision.sh
+          \`\`\`"

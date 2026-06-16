@@ -1,7 +1,9 @@
 # HippoArch QA Makefile
 
-.PHONY: help lint security test test-unit test-functional test-syntax test-integration install-deps
+.PHONY: help lint security test test-unit test-functional test-syntax test-integration install-deps \
+        release
 
+VERSION  := $(shell cat VERSION)
 HEADLESS ?= 0
 
 help:
@@ -15,6 +17,7 @@ help:
 	@echo "  make test              - Run unit + functional tests"
 	@echo "  make test-syntax       - Bash syntax check (bash -n)"
 	@echo "  make test-integration  - Run QEMU integration test (HEADLESS=1 for headless)"
+	@echo "  make release           - Tag and push v$(VERSION), triggering the release pipeline"
 
 install-deps:
 	@echo "Detecting package manager..."
@@ -65,3 +68,16 @@ test-syntax:
 	@bash -n common/base.sh
 	@bash -n lib/partition.sh
 	@echo "Syntax OK."
+
+# ── Release ───────────────────────────────────────────────────────────────────
+
+release:
+	@latest=$$(git tag --sort=-v:refname | head -1); \
+	echo "Current latest tag: $${latest:-none}"; \
+	echo "New release:        v$(VERSION)"; \
+	read -rp "Confirm? [y/N] " ans; \
+	[[ "$$ans" == "y" || "$$ans" == "Y" ]] || { echo "Aborted."; exit 1; }
+	@echo "Tagging and pushing v$(VERSION)..."
+	git tag v$(VERSION)
+	git push origin v$(VERSION)
+	@echo "Pipeline running: https://github.com/hipponix/hippoarch/actions"

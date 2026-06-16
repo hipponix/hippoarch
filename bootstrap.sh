@@ -221,6 +221,8 @@ Type=ether
 DHCP=yes
 NETEOF
 systemctl enable systemd-networkd
+systemctl enable systemd-resolved
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
 # Don't block boot waiting for DHCP — sshd doesn't need network-online
 systemctl disable systemd-networkd-wait-online 2>/dev/null || true
