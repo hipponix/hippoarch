@@ -76,6 +76,10 @@ test-syntax:
 release:
 	@set -e; \
 	git diff --quiet HEAD || { echo "Error: uncommitted changes — commit first"; exit 1; }; \
+	if git tag -l "v$(VERSION)" | grep -q . || \
+	   git ls-remote --tags origin "refs/tags/v$(VERSION)" | grep -q .; then \
+	    echo "Error: tag v$(VERSION) already exists — bump VERSION first"; exit 1; \
+	fi; \
 	latest=$$(git tag --sort=-v:refname | head -1); \
 	branch=$$(git branch --show-current); \
 	echo "Branch:             $$branch"; \
