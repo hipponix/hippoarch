@@ -4,8 +4,8 @@
 set -e
 
 HIPPOARCH_VERSION=$(cat "$(dirname "$0")/VERSION" 2>/dev/null || echo "dev")
-REPO_RAW_URL="${HIPPOARCH_RAW_URL:-https://raw.githubusercontent.com/hipponix/hippoarch/main}"
-REPO_TAR_URL="${HIPPOARCH_TAR_URL:-https://github.com/hipponix/hippoarch/tarball/main}"
+REPO_RAW_URL="${HIPPOARCH_RAW_URL:-https://raw.githubusercontent.com/hipponix/hippoarch/v0.1.0}"
+REPO_TAR_URL="${HIPPOARCH_TAR_URL:-https://github.com/hipponix/hippoarch/tarball/v0.1.0}"
 REPO_API_URL="https://api.github.com/repos/hipponix/hippoarch/contents"
 
 detect_hardware() {
