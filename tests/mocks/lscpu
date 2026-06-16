@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+echo "lscpu $*" >> "${CALL_LOG:-/dev/null}"
+echo "Model name:              Mock CPU @ 2.00GHz"
+echo "CPU(s):                  2"
+echo "Thread(s) per core:      1"
+echo "Core(s) per socket:      2"

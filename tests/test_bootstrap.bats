@@ -67,7 +67,8 @@ teardown() { teardown_test_env; }
 # --- Flag: --fetch-all ---
 
 @test "--fetch-all exits 0" {
-    (cd "$TEST_DIR" && run bash bootstrap.sh --fetch-all)
+    cd "$TEST_DIR"
+    run bash bootstrap.sh --fetch-all
     [ "$status" -eq 0 ]
 }
 
@@ -89,7 +90,8 @@ teardown() { teardown_test_env; }
 # --- Flag: --fetch <profile> ---
 
 @test "--fetch exits 0 after download" {
-    (cd "$TEST_DIR" && run bash bootstrap.sh --fetch profiles/server-cwwk.conf)
+    cd "$TEST_DIR"
+    run bash bootstrap.sh --fetch profiles/server-cwwk.conf
     [ "$status" -eq 0 ]
 }
 
@@ -112,12 +114,14 @@ teardown() { teardown_test_env; }
 # --- No args / missing profile ---
 
 @test "no args exits 1" {
-    (cd "$TEST_DIR" && run bash bootstrap.sh)
+    cd "$TEST_DIR"
+    run bash bootstrap.sh
     [ "$status" -eq 1 ]
 }
 
 @test "no args prints Usage" {
-    (cd "$TEST_DIR" && run bash bootstrap.sh)
+    cd "$TEST_DIR"
+    run bash bootstrap.sh
     [[ "$output" == *"Usage:"* ]]
 }
 
@@ -131,7 +135,8 @@ ROOT_PASSWORD=""
 USER_PASSWORD="pass"
 TIMEZONE="UTC" LOCALE="en_US.UTF-8" LAYOUT="simple" ROLE="server"
 EOF
-    (cd "$TEST_DIR" && run bash bootstrap.sh profiles/no-root-pass.conf)
+    cd "$TEST_DIR"
+    run bash bootstrap.sh profiles/no-root-pass.conf
     [ "$status" -eq 1 ]
     [[ "$output" == *"ROOT_PASSWORD"* ]]
 }
@@ -144,7 +149,8 @@ ROOT_PASSWORD="pass"
 USER_PASSWORD=""
 TIMEZONE="UTC" LOCALE="en_US.UTF-8" LAYOUT="simple" ROLE="server"
 EOF
-    (cd "$TEST_DIR" && run bash bootstrap.sh profiles/no-user-pass.conf)
+    cd "$TEST_DIR"
+    run bash bootstrap.sh profiles/no-user-pass.conf
     [ "$status" -eq 1 ]
     [[ "$output" == *"USER_PASSWORD"* ]]
 }
@@ -153,7 +159,8 @@ EOF
 
 @test "non-block-device DISK exits 1" {
     make_valid_profile "$TEST_DIR/profiles/valid.conf"
-    (cd "$TEST_DIR" && run bash bootstrap.sh profiles/valid.conf)
+    cd "$TEST_DIR"
+    run bash bootstrap.sh profiles/valid.conf
     [ "$status" -eq 1 ]
     [[ "$output" == *"not a block device"* ]]
 }

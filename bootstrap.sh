@@ -10,16 +10,31 @@ REPO_API_URL="https://api.github.com/repos/hipponix/hippoarch/contents"
 
 detect_hardware() {
     echo "=== Hardware Detection ==="
-    lscpu | grep -E "^(Model name|CPU\(s\)|Thread|Core)"
-    lsblk -d -o NAME,SIZE,MODEL | grep -v "^loop"
-    free -h | grep Mem
+    echo ""
+    echo "System:"
+    cat /sys/class/dmi/id/product_name 2>/dev/null || echo "  (unknown)"
+    echo ""
+    echo "Board:"
+    cat /sys/class/dmi/id/board_name 2>/dev/null || echo "  (unknown)"
+    echo ""
+    echo "CPU:"
+    lscpu 2>/dev/null | grep -E "^(Model name|CPU\(s\)|Thread|Core)" || echo "  (unavailable)"
+    echo ""
+    echo "Memory:"
+    free -h 2>/dev/null | grep Mem || echo "  (unavailable)"
+    echo ""
+    echo "Sensors:"
+    sensors 2>/dev/null | head -20 || echo "  (unavailable)"
+    echo ""
+    echo "Disks:"
+    lsblk -d -o NAME,SIZE,MODEL 2>/dev/null | grep -v "^loop" || echo "  (unavailable)"
 }
 
 list_profiles() {
     echo "=== Available Profiles ==="
     curl -s "$REPO_API_URL/profiles" \
         | grep '"name"' \
-        | sed 's/.*"name": "\(.*\)".*/\1/' \
+        | sed 's/.*"name": "\([^"]*\)".*/\1/' \
         | grep '\.conf$'
 }
 
@@ -28,9 +43,10 @@ fetch_all() {
     local profiles
     profiles=$(curl -s "$REPO_API_URL/profiles" \
         | grep '"name"' \
-        | sed 's/.*"name": "\(.*\)".*/\1/' \
+        | sed 's/.*"name": "\([^"]*\)".*/\1/' \
         | grep '\.conf$')
-    mkdir -p profiles
+    mkdir -p profiles lib
+    curl -sL -o lib/partition.sh "$REPO_RAW_URL/lib/partition.sh"
     while IFS= read -r name; do
         echo "Fetching $name..."
         curl -sL -o "profiles/$name" "$REPO_RAW_URL/profiles/$name"
@@ -57,9 +73,11 @@ case "${1:-}" in
         ;;
     --fetch)
         [[ -z "${2:-}" ]] && { echo "Usage: $0 --fetch <profile_name>"; exit 1; }
-        mkdir -p profiles
-        curl -sL -o "profiles/$2" "$REPO_RAW_URL/profiles/$2"
-        echo "Fetched to profiles/$2"
+        _fetch_name="${2#profiles/}"
+        mkdir -p profiles lib
+        curl -sL -o "profiles/$_fetch_name" "$REPO_RAW_URL/profiles/$_fetch_name"
+        curl -sL -o lib/partition.sh "$REPO_RAW_URL/lib/partition.sh"
+        echo "Fetched to profiles/$_fetch_name"
         exit 0
         ;;
 esac
@@ -149,6 +167,14 @@ BASE_PKGS=(base linux linux-firmware vim sudo curl)
 [[ "$LAYOUT" == "btrfs" ]] && BASE_PKGS+=(btrfs-progs)
 # shellcheck disable=SC2206
 [[ -n "${EXTRA_PACKAGES:-}" ]] && BASE_PKGS+=($EXTRA_PACKAGES)
+for _pkg in ${BASE_PKGS_REMOVE:-}; do
+    _filtered=()
+    for _p in "${BASE_PKGS[@]}"; do
+        [[ "$_p" != "$_pkg" ]] && _filtered+=("$_p")
+    done
+    BASE_PKGS=("${_filtered[@]}")
+done
+unset _pkg _filtered _p
 
 ENABLE_SSHD=0
 [[ " ${BASE_PKGS[*]} " =~ " openssh " ]] && ENABLE_SSHD=1

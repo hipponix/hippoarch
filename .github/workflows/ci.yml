@@ -23,3 +23,54 @@ jobs:
 
       - name: Syntax Check
         run: make test-syntax
+
+  test:
+    runs-on: ubuntu-latest
+    needs: qa
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit Tests
+        run: make test-unit
+
+      - name: Functional Tests
+        run: make test-functional
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y qemu-system-x86 qemu-utils ovmf libarchive-tools expect openssh-client python3
+
+      - name: Get current month
+        id: date
+        run: echo "month=$(date +%Y-%m)" >> $GITHUB_OUTPUT
+
+      - name: Cache Arch ISO
+        uses: actions/cache@v4
+        with:
+          path: .cache/arch-latest.iso
+          key: arch-iso-${{ steps.date.outputs.month }}
+
+      - name: Integration test
+        run: make HEADLESS=1 test-integration
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-logs
+          path: tests/integration/logs/

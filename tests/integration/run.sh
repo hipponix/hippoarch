@@ -92,6 +92,11 @@ fail() { FAIL_COUNT=$((FAIL_COUNT + 1)); printf '\e[31m[FAIL]\e[0m %s\n' "$*"; e
 warn() { printf '\e[33m[WARN]\e[0m %s\n' "$*"; }
 hr()   { printf '%s\n' "────────────────────────────────────────────────────────"; }
 
+# GitHub Actions log grouping (no-ops outside GHA)
+gha_group()     { [[ -n "${GITHUB_ACTIONS:-}" ]] && echo "::group::$*"    || true; }
+gha_endgroup()  { [[ -n "${GITHUB_ACTIONS:-}" ]] && echo "::endgroup::"   || true; }
+gha_notice()    { [[ -n "${GITHUB_ACTIONS:-}" ]] && echo "::notice::$*"   || true; }
+
 fmt_elapsed() {
     local s=$1
     [[ $s -lt 0 ]] && s=0
@@ -172,8 +177,10 @@ check_deps() {
 # ── ISO management ───────────────────────────────────────────────────────────
 get_iso() {
     hr
+    gha_group "Download Arch Linux ISO"
     if [[ -f "$ISO_CACHE" ]]; then
         log "Using cached ISO: $ISO_CACHE"
+        gha_endgroup
         return
     fi
     mkdir -p "$(dirname "$ISO_CACHE")"
@@ -184,6 +191,7 @@ get_iso() {
     curl -L --progress-bar -o "$ISO_CACHE" "$ISO_URL"
     echo ""
     log "ISO downloaded and cached."
+    gha_endgroup
 }
 
 # ── SSH key ──────────────────────────────────────────────────────────────────
@@ -353,6 +361,20 @@ automate_serial() {
     local serial_log="$LOG_DIR/serial.log"
     log "Serial console log: $serial_log  (tail -f $serial_log)"
 
+    # Wait for QEMU to open the serial TCP port before connecting.
+    # Using ss (not nc -z) to avoid consuming the single-client connection slot.
+    local i=0
+    while [[ $i -lt 30 ]]; do
+        ss -tlnp 2>/dev/null | grep -q ":${SERIAL_PORT}" && break
+        sleep 1
+        ((i++)) || true
+    done
+    if ! ss -tlnp 2>/dev/null | grep -q ":${SERIAL_PORT}"; then
+        fail "QEMU serial port ${SERIAL_PORT} never opened after 30s"
+    fi
+    log "Serial port ${SERIAL_PORT} ready"
+
+    gha_group "Serial console: boot → SSH key injection"
     expect -c "
         set timeout $BOOT_TIMEOUT
         log_user 1
@@ -365,26 +387,31 @@ automate_serial() {
                 puts \"\\n\\[FAIL\\] Timed out waiting for VM login prompt.\"
                 exit 1
             }
+            eof {
+                puts \"\\n\\[FAIL\\] Serial connection closed before login prompt.\"
+                exit 1
+            }
             \"login:\"    { send \"root\\r\"; exp_continue }
             \"Password:\"  { send \"\\r\";    exp_continue }
             \"@archiso\"  { }
         }
 
         send \"mkdir -p /root/.ssh\\r\"
-        expect \"@archiso\"
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
 
         send \"echo '$(cat ${SSH_KEY_TMP}.pub)' > /root/.ssh/authorized_keys\\r\"
-        expect \"@archiso\"
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
 
         send \"chmod 600 /root/.ssh/authorized_keys\\r\"
-        expect \"@archiso\"
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
 
         send \"systemctl start sshd\\r\"
-        expect \"@archiso\"
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
 
         puts \"\\nSSH key injected — ready.\"
         exit 0
     " || fail "Serial console automation failed"
+    gha_endgroup
 }
 
 # ── SSH helpers ───────────────────────────────────────────────────────────────
@@ -446,6 +473,7 @@ run_phase1() {
         fail "SSH did not become available. Check $LOG_DIR/qemu.log for errors."
     fi
 
+    gha_group "Phase 1: upload scripts"
     log "Uploading scripts to VM..."
     vm_ssh "mkdir -p /root/hippoarch/lib /root/hippoarch/profiles /root/hippoarch/common /root/hippoarch/roles"
     vm_scp_to "$REPO_ROOT/bootstrap.sh"
@@ -458,12 +486,23 @@ run_phase1() {
     vm_ssh "[[ -f /root/hippoarch/bootstrap.sh ]]" || fail "bootstrap.sh upload failed"
     vm_ssh "[[ -f /root/hippoarch/lib/partition.sh ]]" || fail "lib/partition.sh upload failed"
     vm_ssh "[[ -f /root/hippoarch/profiles/qemu-test.conf ]]" || fail "qemu-test.conf upload failed"
+    gha_endgroup
 
+    gha_group "Phase 1: bootstrap.sh (pacstrap + configure)"
+    gha_notice "Running bootstrap.sh — pacstrap downloads ~500 MB, expect 15-30 min"
     log "Running bootstrap.sh with profile qemu-test.conf..."
     log "(The disk wipe confirmation is piped in automatically)"
+    # Stream serial log to stdout so CI shows VM console output in real time.
+    # sed strips most ANSI/VT escape sequences; cat -v shows remaining control chars.
+    local serial_log="$LOG_DIR/serial.log"
+    tail -F "$serial_log" 2>/dev/null | sed 's/\x1b\[[0-9;]*[mhHJKlA-Za-z]//g' &
+    local tail_pid=$!
     local local_tar="http://10.0.2.2:${HTTP_PORT}/hippoarch.tar.gz"
     vm_ssh "cd /root/hippoarch && echo yes | HIPPOARCH_TAR_URL='$local_tar' bash bootstrap.sh profiles/qemu-test.conf"
+    kill "$tail_pid" 2>/dev/null || true
+    gha_endgroup
 
+    gha_group "Phase 1: verify artifacts"
     log "Verifying installation artifacts..."
     vm_ssh "[[ -f /mnt/etc/hippoarch.conf ]]" || fail "/mnt/etc/hippoarch.conf not found"
     vm_ssh "[[ -f /mnt/etc/fstab ]]"          || fail "/mnt/etc/fstab not found"
@@ -493,6 +532,7 @@ run_phase1() {
         || fail "hippoarch.conf is not immutable (chattr +i missing)"
     vm_ssh "grep -q 'ROLE=\"workstation\"' /mnt/etc/hippoarch.conf" \
         || fail "ROLE does not match profile in hippoarch.conf"
+    gha_endgroup
 
     PHASE1_STATUS="pass"; PHASE1_END=$(date +%s)
     pass "Phase 1 — Bootstrap completed and verified"
@@ -506,6 +546,7 @@ run_phase1() {
 run_phase2() {
     PHASE2_START=$(date +%s)
     hr
+    gha_group "Phase 2: provision (boot installed system)"
     log "=== Phase 2: Provision (fresh VM booting installed system) ==="
 
     # Stop the Phase 1 VM cleanly before starting Phase 2.
@@ -564,6 +605,7 @@ run_phase2() {
     [[ -n "$ptime" ]] || fail "PROVISION_TIME is empty"
 
     PHASE2_STATUS="pass"; PHASE2_END=$(date +%s)
+    gha_endgroup
     pass "Phase 2 — Provision completed and verified (provision time: $ptime)"
 }
 

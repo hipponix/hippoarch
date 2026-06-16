@@ -41,13 +41,13 @@ test-functional:
 	@docker run --rm --privileged \
 		-v "$$(pwd):/hippoarch" -w /hippoarch \
 		--entrypoint sh bats/bats:1.11.0 \
-		-c "apk add -q --update --no-progress gdisk dosfstools e2fsprogs btrfs-progs util-linux >/dev/null && \
+		-c "apk add -q --update --no-progress sgdisk dosfstools e2fsprogs btrfs-progs util-linux >/dev/null && \
 		    bats tests/functional/"
 
 test: test-unit test-functional
 
 test-integration:
-	@HIPPOARCH_HEADLESS=$(HEADLESS) bash tests/integration/run.sh
+	@HIPPOARCH_HEADLESS=$${HIPPOARCH_HEADLESS:-$(HEADLESS)} bash tests/integration/run.sh
 
 lint:
 	@shellcheck bootstrap.sh provision.sh common/base.sh lib/partition.sh \

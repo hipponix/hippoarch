@@ -23,10 +23,14 @@ hippoarch/
 │   ├── server-k8s-master/install.sh
 │   ├── server-k8s-node/install.sh
 │   └── workstation/install.sh
+├── docs/
+│   ├── user-manual.md      # Full installation and usage guide
+│   └── testing.md          # Testing strategy and developer guide
 └── tests/
     ├── helpers.bash
-    ├── mocks/              # 18 mock scripts (log calls, exit 0)
-    ├── test_*.bats         # bats unit tests
+    ├── mocks/              # Mock scripts for unit tests
+    ├── test_*.bats         # Unit tests (bats, mocked)
+    ├── functional/         # Functional tests (real loopback devices)
     └── integration/run.sh  # QEMU end-to-end test
 ```
 
@@ -185,12 +189,16 @@ make install-deps   # shellcheck + docker + qemu + git hook wired to hooks/pre-p
 make lint           # shellcheck on all scripts
 make security       # grep for sensitive patterns
 make test-syntax    # bash -n on all scripts
-make test           # bats unit tests via docker
+make test-unit         # unit tests (bats + mocks, docker)
+make test-functional   # functional tests (real loopback, privileged docker)
+make test              # unit + functional
 make test-integration          # QEMU end-to-end (opens window)
 make HEADLESS=1 test-integration  # headless
 ```
 
 The pre-push hook (`hooks/pre-push`) runs `make lint`, `make security`, and `make test-syntax` automatically. Wire it once with `make install-deps`.
+
+See [docs/testing.md](docs/testing.md) for the full testing strategy, and [docs/user-manual.md](docs/user-manual.md) for detailed installation instructions.
 
 ## References
 

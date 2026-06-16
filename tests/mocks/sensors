@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+echo "sensors $*" >> "${CALL_LOG:-/dev/null}"
+echo "Adapter: ISA adapter"
+echo "Package id 0:  +45.0°C  (high = +80.0°C)"

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+echo "free $*" >> "${CALL_LOG:-/dev/null}"
+echo "               total        used        free      shared  buff/cache   available"
+echo "Mem:           7.7Gi       1.2Gi       5.1Gi       100Mi       1.4Gi       6.2Gi"

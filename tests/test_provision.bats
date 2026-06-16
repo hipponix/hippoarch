@@ -18,17 +18,20 @@ teardown() {
 
 @test "reads ROLE from /etc/hippoarch.conf" {
     # conf has ROLE=server-cwwk; provision.sh must log the server-cwwk role stub
-    (cd "$TEST_DIR" && run bash provision.sh)
+    cd "$TEST_DIR"
+    run bash provision.sh
     [[ "$output" == *"role server-cwwk stub"* ]]
 }
 
 @test "CLI arg overrides ROLE from conf" {
-    (cd "$TEST_DIR" && run bash provision.sh workstation)
+    cd "$TEST_DIR"
+    run bash provision.sh workstation
     [[ "$output" == *"role workstation stub"* ]]
 }
 
 @test "invalid role exits 1" {
-    (cd "$TEST_DIR" && run bash provision.sh nonexistent-role)
+    cd "$TEST_DIR"
+    run bash provision.sh nonexistent-role
     [ "$status" -eq 1 ]
     [[ "$output" == *"not a valid role"* ]]
 }
@@ -36,7 +39,8 @@ teardown() {
 @test "no role applies base configuration only" {
     # Remove ROLE from conf and run without arg
     sed -i 's/^ROLE=.*/ROLE=""/' "$CONF_PATH"
-    (cd "$TEST_DIR" && run bash provision.sh)
+    cd "$TEST_DIR"
+    run bash provision.sh
     [ "$status" -eq 0 ]
     [[ "$output" == *"base stub"* ]]
     [[ "$output" == *"No role specified"* ]]
