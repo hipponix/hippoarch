@@ -36,7 +36,7 @@ SERIAL_PORT=14445   # TCP port for the serial console automation channel
 SSH_PORT=12222      # TCP port forwarded to the VM's SSH (avoids conflict with host)
 BOOT_TIMEOUT=180    # seconds to wait for live ISO to reach a shell prompt
 SSH_TIMEOUT=120     # seconds to wait for SSH (Phase 1)
-SSH_TIMEOUT_P2=300  # seconds to wait for SSH on installed system (Phase 2)
+SSH_TIMEOUT_P2=60   # seconds to wait for SSH on installed system (Phase 2)
 
 SSH_OPTS=(
     -o StrictHostKeyChecking=no
@@ -396,17 +396,19 @@ automate_serial() {
             \"@archiso\"  { }
         }
 
+        set timeout 30
+
         send \"mkdir -p /root/.ssh\\r\"
-        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } timeout { } \"@archiso\" }
 
         send \"echo '$(cat ${SSH_KEY_TMP}.pub)' > /root/.ssh/authorized_keys\\r\"
-        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } timeout { } \"@archiso\" }
 
         send \"chmod 600 /root/.ssh/authorized_keys\\r\"
-        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } timeout { } \"@archiso\" }
 
         send \"systemctl start sshd\\r\"
-        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } \"@archiso\" }
+        expect { eof { puts \"\\[FAIL\\] Serial EOF\"; exit 1 } timeout { } \"@archiso\" }
 
         puts \"\\nSSH key injected — ready.\"
         exit 0
@@ -489,7 +491,7 @@ run_phase1() {
     gha_endgroup
 
     gha_group "Phase 1: bootstrap.sh (pacstrap + configure)"
-    gha_notice "Running bootstrap.sh — pacstrap downloads ~500 MB, expect 15-30 min"
+    gha_notice "Running bootstrap.sh — pacstrap downloads ~300 MB (linux-firmware excluded)"
     log "Running bootstrap.sh with profile qemu-test.conf..."
     log "(The disk wipe confirmation is piped in automatically)"
     # Stream serial log to stdout so CI shows VM console output in real time.
