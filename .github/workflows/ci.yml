@@ -22,7 +22,7 @@ jobs:
           token: ''
           filters: |
             code:
-              - '!(README.md|docs/**|.github/ISSUE_TEMPLATE/**)'
+              - '!(README.md|index.md|_config.yml|docs/**|.github/ISSUE_TEMPLATE/**)'
             install:
               - 'bootstrap.sh'
               - 'provision.sh'

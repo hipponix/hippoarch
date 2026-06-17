@@ -20,6 +20,8 @@ Built out of necessity after one too many manual installs. Rather than reaching 
 
 ## Quick start
 
+Boot from a live Arch ISO, then run:
+
 ```bash
 curl -LO https://github.com/hipponix/hippoarch/releases/latest/download/hippoarch.tar.gz
 tar xzf hippoarch.tar.gz && cd hippoarch
@@ -29,6 +31,8 @@ bash bootstrap.sh profiles/workstation.conf
 
 After reboot: `cd hippoarch && bash provision.sh`
 
+For detailed installation steps, flash instructions, and profile configuration — [see the full installation guide →](https://github.com/hipponix/hippoarch#installation-guide)
+
 ---
 
-[Full documentation and installation guide →](https://github.com/hipponix/hippoarch#readme)
+[Full documentation →](https://github.com/hipponix/hippoarch#readme)
