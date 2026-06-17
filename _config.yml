@@ -1,0 +1,5 @@
+theme: jekyll-theme-cayman
+title: HippoArch
+description: Zero-dependency Arch Linux installer and provisioner. No Ansible, just bash.
+show_downloads: true
+google_analytics:
