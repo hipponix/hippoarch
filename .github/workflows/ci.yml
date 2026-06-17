@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  changes:
+  path-filters:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
@@ -32,9 +32,10 @@ jobs:
               - 'roles/**'
 
   lint:
+    name: QA / Lint
     runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
+    needs: path-filters
+    if: needs.path-filters.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -51,9 +52,10 @@ jobs:
         run: make test-syntax
 
   unit:
+    name: Tests / Unit
     runs-on: ubuntu-latest
-    needs: [changes, lint]
-    if: needs.changes.outputs.code == 'true'
+    needs: [path-filters, lint]
+    if: needs.path-filters.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -61,9 +63,10 @@ jobs:
         run: make test-unit
 
   functional:
+    name: Tests / Functional
     runs-on: ubuntu-latest
-    needs: [changes, lint]
-    if: needs.changes.outputs.code == 'true'
+    needs: [path-filters, lint]
+    if: needs.path-filters.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -71,9 +74,10 @@ jobs:
         run: make test-functional
 
   integration:
+    name: Tests / Integration
     runs-on: ubuntu-latest
-    needs: [unit, functional, changes]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.install == 'true'
+    needs: [unit, functional, path-filters]
+    if: github.event_name == 'pull_request' && needs.path-filters.outputs.install == 'true'
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4

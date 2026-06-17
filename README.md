@@ -1,6 +1,18 @@
 # HippoArch
 
 [![CI](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml/badge.svg)](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/hipponix/hippoarch)](https://github.com/hipponix/hippoarch/releases/latest)
+
+## Table of contents
+
+- [Installation](#installation)
+- [Workflow](#workflow)
+- [Installation guide](#installation-guide)
+- [Profiles](#profiles)
+- [Directory structure](#directory-structure)
+- [Development](#development)
+- [Contributing](#contributing)
+- [References](#references)
 
 HippoArch automates Arch Linux installation and post-install provisioning in two phases — bootstrap from the live ISO, then provision after reboot — with no dependencies beyond bash and standard Arch tools.
 
@@ -251,6 +263,10 @@ make release   # merge to main, tag vX.Y.Z, push — triggers the CI release pip
 ```
 
 Bump `VERSION` before running. The pipeline builds the tarball and publishes a GitHub release.
+
+## Contributing
+
+Issues and pull requests are welcome. If you're adding a new profile or role, make sure `make test` passes locally before opening a PR. For anything non-trivial, open an issue first so we can discuss the approach.
 
 ## References
 
