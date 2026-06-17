@@ -1,5 +1,7 @@
 # HippoArch
 
+[![CI](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml/badge.svg)](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml)
+
 HippoArch automates Arch Linux installation and post-install provisioning in two phases — bootstrap from the live ISO, then provision after reboot — with no dependencies beyond bash and standard Arch tools.
 
 I built it out of necessity: I kept repeating the same setup steps every time I configured a new machine. When I picked up a CWWK 8-bay board to build my own NAS, I finally decided to sort through a growing pile of local notes and automate the whole thing properly. Rather than reaching for Ansible or any other configuration management tool, I took it as a good excuse to go deeper into Linux and bash basics — keeping things simple, modular, and easy to evolve without extra layers or overhead.
