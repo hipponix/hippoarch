@@ -3,6 +3,14 @@
 [![CI](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml/badge.svg)](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hipponix/hippoarch)](https://github.com/hipponix/hippoarch/releases/latest)
 
+HippoArch automates Arch Linux installation and post-install provisioning in two phases — bootstrap from the live ISO, then provision after reboot — with no dependencies beyond bash and standard Arch tools.
+
+I built it out of necessity: I kept repeating the same setup steps every time I configured a new machine. When I picked up a CWWK 8-bay board to build my own NAS, I finally decided to sort through a growing pile of local notes and automate the whole thing properly. Rather than reaching for Ansible or any other configuration management tool, I took it as a good excuse to go deeper into Linux and bash basics — keeping things simple, modular, and easy to evolve without extra layers or overhead.
+
+It was never a clean one-shot implementation though. It grew incrementally, one issue at a time, each one found the hard way — including more than a few nights watching it fail silently.
+
+Sharing it here in case it's useful to anyone running a similar Arch setup.
+
 ## Table of contents
 
 - [Installation](#installation)
@@ -13,14 +21,6 @@
 - [Development](#development)
 - [Contributing](#contributing)
 - [References](#references)
-
-HippoArch automates Arch Linux installation and post-install provisioning in two phases — bootstrap from the live ISO, then provision after reboot — with no dependencies beyond bash and standard Arch tools.
-
-I built it out of necessity: I kept repeating the same setup steps every time I configured a new machine. When I picked up a CWWK 8-bay board to build my own NAS, I finally decided to sort through a growing pile of local notes and automate the whole thing properly. Rather than reaching for Ansible or any other configuration management tool, I took it as a good excuse to go deeper into Linux and bash basics — keeping things simple, modular, and easy to evolve without extra layers or overhead.
-
-It was never a clean one-shot implementation though. It grew incrementally, one issue at a time, each one found the hard way — including more than a few nights watching it fail silently.
-
-Sharing it here in case it's useful to anyone running a similar Arch setup.
 
 ## Installation
 
