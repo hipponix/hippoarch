@@ -20,7 +20,11 @@ Built out of necessity after one too many manual installs. Rather than reaching 
 
 ## Quick start
 
-Boot from a live Arch ISO, then run:
+1. Download the [Arch Linux ISO](https://archlinux.org/download/)
+2. Flash it to a USB stick — with [Balena Etcher](https://etcher.balena.io) or `dd`:
+   `dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress && sync`
+3. Boot from the USB and wait for the Arch login prompt
+4. Download and run HippoArch:
 
 ```bash
 curl -LO https://github.com/hipponix/hippoarch/releases/latest/download/hippoarch.tar.gz
