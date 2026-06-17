@@ -14,8 +14,8 @@ Sharing it here in case it's useful to anyone running a similar Arch setup.
 ## Table of contents
 
 - [Installation](#installation)
-- [Workflow](#workflow)
 - [Installation guide](#installation-guide)
+- [Workflow](#workflow)
 - [Profiles](#profiles)
 - [Directory structure](#directory-structure)
 - [Development](#development)
@@ -37,77 +37,6 @@ Flash a USB with the [Arch Linux ISO](https://archlinux.org/download/) and boot 
 Reboot into the freshly installed system and run `provision.sh`. It installs packages, configures hardware and sensors, deploys dotfiles, and applies the role-specific setup defined in the profile.
 
 ![Phase 2 — Provision demo](docs/phase2.svg)
-
-## Workflow
-
-### Phase 1 — Bootstrap (Live ISO)
-
-```mermaid
-flowchart LR
-    classDef user fill:#2E86C1,stroke:#1A5276,color:#fff
-    classDef auto fill:#1E8449,stroke:#145A32,color:#fff
-
-    User(["User"]):::user
-
-    subgraph usteps["Manual (User)"]
-        direction TB
-        Lpre["1. Download & flash\nArch ISO to USB"]:::user
-        L0["2. Insert USB & boot to\nArch ISO"]:::user
-        L1["3. Download & extract\nhippoarch release"]:::user
-        L2["4. bash bootstrap.sh --list"]:::user
-        L3["5. Edit profile .conf"]:::user
-        L4["6. bash bootstrap.sh &lt;profile&gt;"]:::user
-        Lpre --> L0 --> L1 --> L2 --> L3 --> L4
-    end
-
-    subgraph asteps["Automation (bootstrap.sh)"]
-        direction TB
-        B1["7. Validate disk & confirm wipe"]:::auto
-        B2["8. Partition & format\nEFI + ROOT"]:::auto
-        B3["9. Install base system"]:::auto
-        B4["10. Apply base configuration"]:::auto
-        B5["11. Drop provision.sh\nto user $HOME"]:::auto
-        B1 --> B2 --> B3 --> B4 --> B5
-    end
-
-    Reboot(["Reboot"]):::user
-
-    User --> usteps --> asteps --> Reboot
-```
-
-### Phase 2 — Provisioning (post-reboot)
-
-```mermaid
-flowchart LR
-    classDef user    fill:#2E86C1,stroke:#1A5276,color:#fff
-    classDef auto    fill:#1E8449,stroke:#145A32,color:#fff
-    classDef outcome fill:#6C3483,stroke:#4A235A,color:#fff
-
-    User(["User"]):::user
-
-    subgraph msteps["Manual (User)"]
-        direction TB
-        M1["1. Login as USERNAME"]:::user
-        M2["2. cd hippoarch"]:::user
-        M3["3. ./provision.sh"]:::user
-        M1 --> M2 --> M3
-    end
-
-    subgraph asteps["Automation (provision.sh)"]
-        direction TB
-        P1["4. Install base packages"]:::auto
-        P2["5. Configure hardware\n& sensors"]:::auto
-        P3["6. Deploy dotfiles"]:::auto
-        P4["7. Apply role\nconfiguration"]:::auto
-        P1 --> P2 --> P3 --> P4
-    end
-
-    Ready[/"System ready"/]:::outcome
-
-    User --> msteps --> asteps --> Ready
-```
-
-> **Legend:** blue = user action &nbsp;·&nbsp; green = automated by script &nbsp;·&nbsp; purple = final state
 
 ## Installation guide
 
@@ -183,6 +112,77 @@ flowchart LR
 5. Load the IT87 hardware driver and enable sensor monitoring via `lm_sensors`.
 6. Copy dotfiles (`.vimrc`, `.bash_aliases`) to the user home directory.
 7. Run `roles/<role>/install.sh` to apply role-specific packages and configuration.
+
+## Workflow
+
+### Phase 1 — Bootstrap (Live ISO)
+
+```mermaid
+flowchart LR
+    classDef user fill:#2E86C1,stroke:#1A5276,color:#fff
+    classDef auto fill:#1E8449,stroke:#145A32,color:#fff
+
+    User(["User"]):::user
+
+    subgraph usteps["Manual (User)"]
+        direction TB
+        Lpre["1. Download & flash\nArch ISO to USB"]:::user
+        L0["2. Insert USB & boot to\nArch ISO"]:::user
+        L1["3. Download & extract\nhippoarch release"]:::user
+        L2["4. bash bootstrap.sh --list"]:::user
+        L3["5. Edit profile .conf"]:::user
+        L4["6. bash bootstrap.sh &lt;profile&gt;"]:::user
+        Lpre --> L0 --> L1 --> L2 --> L3 --> L4
+    end
+
+    subgraph asteps["Automation (bootstrap.sh)"]
+        direction TB
+        B1["7. Validate disk & confirm wipe"]:::auto
+        B2["8. Partition & format\nEFI + ROOT"]:::auto
+        B3["9. Install base system"]:::auto
+        B4["10. Apply base configuration"]:::auto
+        B5["11. Drop provision.sh\nto user $HOME"]:::auto
+        B1 --> B2 --> B3 --> B4 --> B5
+    end
+
+    Reboot(["Reboot"]):::user
+
+    User --> usteps --> asteps --> Reboot
+```
+
+### Phase 2 — Provisioning (post-reboot)
+
+```mermaid
+flowchart LR
+    classDef user    fill:#2E86C1,stroke:#1A5276,color:#fff
+    classDef auto    fill:#1E8449,stroke:#145A32,color:#fff
+    classDef outcome fill:#6C3483,stroke:#4A235A,color:#fff
+
+    User(["User"]):::user
+
+    subgraph msteps["Manual (User)"]
+        direction TB
+        M1["1. Login as USERNAME"]:::user
+        M2["2. cd hippoarch"]:::user
+        M3["3. ./provision.sh"]:::user
+        M1 --> M2 --> M3
+    end
+
+    subgraph asteps["Automation (provision.sh)"]
+        direction TB
+        P1["4. Install base packages"]:::auto
+        P2["5. Configure hardware\n& sensors"]:::auto
+        P3["6. Deploy dotfiles"]:::auto
+        P4["7. Apply role\nconfiguration"]:::auto
+        P1 --> P2 --> P3 --> P4
+    end
+
+    Ready[/"System ready"/]:::outcome
+
+    User --> msteps --> asteps --> Ready
+```
+
+> **Legend:** blue = user action &nbsp;·&nbsp; green = automated by script &nbsp;·&nbsp; purple = final state
 
 ## Profiles
 
