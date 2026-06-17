@@ -1,40 +1,30 @@
 # HippoArch
 
-These are my personal notes and scripts for configuring my local Arch Linux workstations and servers.
+HippoArch automates Arch Linux installation and post-install provisioning in two phases — bootstrap from the live ISO, then provision after reboot — with no dependencies beyond bash and standard Arch tools.
 
-I built this because I found myself repeating the same installation and configuration steps over and over — especially when setting up new hardware like my CWWK 8-bay motherboard. I wanted a way to automate the process without the complexity and extra layers of Ansible or other heavy configuration management frameworks.
+I built it out of necessity: I kept repeating the same setup steps every time I configured a new machine. When I picked up a CWWK 8-bay board to build my own NAS, I finally decided to sort through a growing pile of local notes and automate the whole thing properly. Rather than reaching for Ansible or any other configuration management tool, I took it as a good excuse to go deeper into Linux and bash basics — keeping things simple, modular, and easy to evolve without extra layers or overhead.
 
-I'm sharing these notes here in the hope that they might be helpful to anyone else looking for a simple, zero-dependency way to manage their Arch fleet.
+It was never a clean one-shot implementation though. It grew incrementally, one issue at a time, each one found the hard way — including more than a few nights watching it fail silently.
 
-## Directory structure
-
-```text
-hippoarch/
-├── bootstrap.sh            # Phase 1: run from Live ISO
-├── provision.sh            # Phase 2: run after first reboot
-├── profiles/               # Machine-specific .conf files
-├── lib/
-│   └── partition.sh        # layout_simple / layout_btrfs
-├── common/
-│   ├── base.sh             # Packages, sensors, dotfiles — all machines
-│   └── dotfiles/           # .vimrc, .bash_aliases
-├── roles/
-│   ├── server-cwwk/install.sh
-│   ├── server-k8s-master/install.sh
-│   ├── server-k8s-node/install.sh
-│   └── workstation/install.sh
-├── docs/
-│   ├── user-manual.md      # Full installation and usage guide
-│   └── testing.md          # Testing strategy and developer guide
-└── tests/
-    ├── helpers.bash
-    ├── mocks/              # Mock scripts for unit tests
-    ├── test_*.bats         # Unit tests (bats, mocked)
-    ├── functional/         # Functional tests (real loopback devices)
-    └── integration/run.sh  # QEMU end-to-end test
-```
+Sharing it here in case it's useful to anyone running a similar Arch setup.
 
 ## Installation
+
+### Phase 1 — Bootstrap (Live ISO)
+
+Flash a USB with the [Arch Linux ISO](https://archlinux.org/download/) and boot from it. Download and extract the HippoArch release, then run `bootstrap.sh` with a profile. It partitions the disk, installs the base system, and drops `provision.sh` into the new user's home — ready for Phase 2.
+
+> Pick one of the existing profiles or create your own — see the [Profiles](#profiles) section.
+
+![Phase 1 — Bootstrap demo](docs/phase1.svg)
+
+### Phase 2 — Provisioning (post-reboot)
+
+Reboot into the freshly installed system and run `provision.sh`. It installs packages, configures hardware and sensors, deploys dotfiles, and applies the role-specific setup defined in the profile.
+
+![Phase 2 — Provision demo](docs/phase2.svg)
+
+## Workflow
 
 ### Phase 1 — Bootstrap (Live ISO)
 
@@ -47,21 +37,22 @@ flowchart LR
 
     subgraph usteps["Manual (User)"]
         direction TB
-        L1["1. curl -LO\n.../bootstrap.sh"]:::user
-        L2["2. bash bootstrap.sh --list"]:::user
-        L3["3. bash bootstrap.sh\n--fetch &lt;profile&gt;"]:::user
-        L4["4. vim profiles/server-cwwk.conf"]:::user
-        L5["5. bash bootstrap.sh &lt;profile&gt;"]:::user
-        L1 --> L2 --> L3 --> L4 --> L5
+        Lpre["1. Download & flash\nArch ISO to USB"]:::user
+        L0["2. Insert USB & boot to\nArch ISO"]:::user
+        L1["3. Download & extract\nhippoarch release"]:::user
+        L2["4. bash bootstrap.sh --list"]:::user
+        L3["5. Edit profile .conf"]:::user
+        L4["6. bash bootstrap.sh &lt;profile&gt;"]:::user
+        Lpre --> L0 --> L1 --> L2 --> L3 --> L4
     end
 
     subgraph asteps["Automation (bootstrap.sh)"]
         direction TB
-        B1["6. Validate disk & confirm wipe"]:::auto
-        B2["7. Partition & format\nEFI + ROOT"]:::auto
-        B3["8. Install base system"]:::auto
-        B4["9. Apply base configuration"]:::auto
-        B5["10. Download provision.sh\nto user $HOME"]:::auto
+        B1["7. Validate disk & confirm wipe"]:::auto
+        B2["8. Partition & format\nEFI + ROOT"]:::auto
+        B3["9. Install base system"]:::auto
+        B4["10. Apply base configuration"]:::auto
+        B5["11. Drop provision.sh\nto user $HOME"]:::auto
         B1 --> B2 --> B3 --> B4 --> B5
     end
 
@@ -69,48 +60,6 @@ flowchart LR
 
     User --> usteps --> asteps --> Reboot
 ```
-
-*Manual (User):*
-
-1. Download the bootstrap script from the GitHub repo.
-   ```bash
-   curl -LO https://raw.githubusercontent.com/hipponix/hippoarch/main/bootstrap.sh
-   ```
-2. Print all available profiles to pick the right one for your hardware.
-   ```bash
-   bash bootstrap.sh --list
-   ```
-3. Download the selected profile and `lib/partition.sh` locally without running anything.
-   ```bash
-   bash bootstrap.sh --fetch profiles/server-cwwk.conf
-   ```
-4. Open the `.conf` file and set `DISK`, `HOSTNAME`, `USERNAME`, `ROOT_PASSWORD`, `USER_PASSWORD`, `TIMEZONE`, `LOCALE`, and `LAYOUT`. The script aborts if passwords are left as `changeme`.
-   ```bash
-   vim profiles/server-cwwk.conf
-   ```
-5. Source the profile and start the automated installation.
-   ```bash
-   bash bootstrap.sh profiles/server-cwwk.conf
-   ```
-
-*Automation (bootstrap.sh):*
-
-6. Check that `DISK` is a valid block device and require explicit `yes` confirmation before any write.
-7. Create a GPT table with a 512 MB EFI partition and a root partition, and format them as FAT32 and ext4 or btrfs respectively.
-8. Install the base Arch packages into `/mnt`.
-9. Enter the new system and apply the base configuration.
-10. Download `provision.sh` to the user `$HOME` directory, ready to run after reboot.
-
-### Bootstrap options reference
-
-| Option | Description |
-|--------|-------------|
-| `--version` | Print the current HippoArch version |
-| `--detect` | Show CPU, disk, and RAM info for the current machine |
-| `--list` | List available profiles from the GitHub repo |
-| `--fetch-all` | Download all profiles and `lib/partition.sh` locally |
-| `--fetch <profile>` | Download a single profile and `lib/partition.sh` without running |
-| `<profile>` | Run the full bootstrap using the given profile |
 
 ### Phase 2 — Provisioning (post-reboot)
 
@@ -145,6 +94,62 @@ flowchart LR
 ```
 
 > **Legend:** blue = user action &nbsp;·&nbsp; green = automated by script &nbsp;·&nbsp; purple = final state
+
+## Installation guide
+
+### Phase 1 — Bootstrap (Live ISO)
+
+*Manual (User):*
+
+1. Download the [Arch Linux ISO](https://archlinux.org/download/) and flash it to a USB drive.
+
+   With [Balena Etcher](https://etcher.balena.io) (GUI), or with `dd`:
+   ```bash
+   dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress && sync
+   ```
+
+2. Insert the USB, power on the device, and wait for the Arch Linux login prompt.
+
+   <img src="docs/iso-installer.png" alt="Arch Linux ISO" width="480">
+
+3. Download and extract the latest HippoArch release.
+   ```bash
+   curl -LO https://github.com/hipponix/hippoarch/releases/latest/download/hippoarch.tar.gz
+   tar xzf hippoarch.tar.gz && cd hippoarch
+   ```
+4. List available profiles to pick the right one for your hardware.
+   ```bash
+   bash bootstrap.sh --list
+   ```
+5. Open the `.conf` file and set `DISK`, `HOSTNAME`, `USERNAME`, `ROOT_PASSWORD`, `USER_PASSWORD`, `TIMEZONE`, `LOCALE`, and `LAYOUT`. The script aborts if passwords are left as `changeme`.
+   ```bash
+   vim profiles/workstation.conf
+   ```
+6. Run the bootstrap with your chosen profile.
+   ```bash
+   bash bootstrap.sh profiles/workstation.conf
+   ```
+
+*Automation (bootstrap.sh):*
+
+7. Check that `DISK` is a valid block device and require explicit `yes` confirmation before any write.
+8. Create a GPT table with a 512 MB EFI partition and a root partition, and format them as FAT32 and ext4 or btrfs respectively.
+9. Install the base Arch packages into `/mnt`.
+10. Enter the new system and apply the base configuration.
+11. Place `provision.sh` in the user `$HOME` directory, ready to run after reboot.
+
+### Bootstrap options reference
+
+| Option | Description |
+|--------|-------------|
+| `--version` | Print the current HippoArch version |
+| `--detect` | Show CPU, disk, and RAM info for the current machine |
+| `--list` | List available profiles from the GitHub repo |
+| `--fetch-all` | Download all profiles and `lib/partition.sh` locally |
+| `--fetch <profile>` | Download a single profile and `lib/partition.sh` without running |
+| `<profile>` | Run the full bootstrap using the given profile |
+
+### Phase 2 — Provisioning (post-reboot)
 
 *Manual (User):*
 
@@ -182,26 +187,71 @@ A profile is a `.conf` file sourced into `bootstrap.sh`. Required fields:
 | `ROLE` | `server-cwwk` | Written to `/etc/hippoarch.conf` |
 | `EXTRA_PACKAGES` | `"openssh htop"` | Space-separated, optional |
 
-## Quality assurance
+## Directory structure
+
+```text
+hippoarch/
+├── bootstrap.sh            # Phase 1: run from Live ISO
+├── provision.sh            # Phase 2: run after first reboot
+├── profiles/               # Machine-specific .conf files
+├── lib/
+│   └── partition.sh        # layout_simple / layout_btrfs
+├── common/
+│   ├── base.sh             # Packages, sensors, dotfiles — all machines
+│   └── dotfiles/           # .vimrc, .bash_aliases
+├── roles/
+│   ├── server-cwwk/install.sh
+│   ├── server-k8s-master/install.sh
+│   ├── server-k8s-node/install.sh
+│   └── workstation/install.sh
+├── docs/
+│   ├── user-manual.md      # Full installation and usage guide
+│   └── testing.md          # Testing strategy and developer guide
+└── tests/
+    ├── helpers.bash
+    ├── mocks/              # Mock scripts for unit tests
+    ├── test_*.bats         # Unit tests (bats, mocked)
+    ├── functional/         # Functional tests (real loopback devices)
+    └── integration/run.sh  # QEMU end-to-end test
+```
+
+## Development
+
+### Setup
 
 ```bash
 make install-deps   # shellcheck + docker + qemu + git hook wired to hooks/pre-push
-make lint           # shellcheck on all scripts
-make security       # grep for sensitive patterns
-make test-syntax    # bash -n on all scripts
-make test-unit         # unit tests (bats + mocks, docker)
-make test-functional   # functional tests (real loopback, privileged docker)
-make test              # unit + functional
-make test-integration          # QEMU end-to-end (opens window)
+```
+
+### Quality assurance
+
+```bash
+make lint                         # shellcheck on all scripts
+make security                     # grep for sensitive patterns
+make test-syntax                  # bash -n on all scripts
+make test-unit                    # unit tests (bats + mocks, docker)
+make test-functional              # functional tests (real loopback, privileged docker)
+make test                         # unit + functional
+make test-integration             # QEMU end-to-end (opens window)
 make HEADLESS=1 test-integration  # headless
 ```
 
 The pre-push hook (`hooks/pre-push`) runs `make lint`, `make security`, and `make test-syntax` automatically. Wire it once with `make install-deps`.
 
-See [docs/testing.md](docs/testing.md) for the full testing strategy, and [docs/user-manual.md](docs/user-manual.md) for detailed installation instructions.
+The integration test (`make test-integration`) spins up a real QEMU virtual machine and runs the full two-phase installation — bootstrap from a live Arch ISO, reboot into the installed system, provision — verifying the result end-to-end. The same test runs headless on the CI pipeline on every push, so every change is validated against a real Arch install, not a mock.
+
+See [docs/testing.md](docs/testing.md) for the full testing strategy.
+
+### Release
+
+```bash
+make release   # merge to main, tag vX.Y.Z, push — triggers the CI release pipeline
+```
+
+Bump `VERSION` before running. The pipeline builds the tarball and publishes a GitHub release.
 
 ## References
 
 - [Arch Wiki: Installation guide](https://wiki.archlinux.org/title/Installation_guide)
 - [Arch Wiki: Lm_sensors](https://wiki.archlinux.org/title/Lm_sensors)
-- [CWWK Motherboard Specs](https://cwwkpc.com/products/cwwk-nas-motherboard-8-bay-core-i5-8265u-4c-8t-mini-itx-pc-mainboard-white-m11-2-x-nvme-pcie3-0-x2-dual-2-5gbe-i226v-lan-ddr4-16gb-ram-128gb-ssd-pcie-x4-slot-tf-hd-dp)
+- [CWWK Motherboard Specs](https://cwwkpc.com/products/cwwk/nas-motherboard-8-bay-core-i5-8265u-4c-8t-mini-itx-pc-mainboard-white-m11-2-x-nvme-pcie3-0-x2-dual-2-5gbe-i226v-lan-ddr4-16gb-ram-128gb-ssd-pcie-x4-slot-tf-hd-dp)
