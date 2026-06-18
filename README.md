@@ -5,15 +5,15 @@
 
 HippoArch automates Arch Linux installation and post-install provisioning in two phases — bootstrap from the live ISO, then provision after reboot — with no dependencies beyond bash and standard Arch tools.
 
-I built it out of necessity: I kept repeating the same setup steps every time I configured a new machine. When I picked up a CWWK 8-bay board to build my own NAS, I finally decided to sort through a growing pile of local notes and automate the whole thing properly. Rather than reaching for Ansible or any other configuration management tool, I took it as a good excuse to go deeper into Linux and bash basics — keeping things simple, modular, and easy to evolve without extra layers or overhead.
+I built it out of necessity: I kept repeating the same setup steps every time I configured a new machine. After my last manual installation, I finally decided to sort through a growing pile of local notes and automate the whole thing properly. Rather than reaching for Ansible or any other configuration management tool, I took it as a good excuse to go deeper into Linux and bash basics — keeping things simple, modular, and easy to evolve without extra layers or overhead.
 
 It was never a clean one-shot implementation though. It grew incrementally, one issue at a time, each one found the hard way — including more than a few nights watching it fail silently.
 
-Sharing it here in case it's useful to anyone running a similar Arch setup.
+Sharing it here in case it's useful to anyone running a similar Arch setup. Built around my needs — it may not work for many others.
 
 ## Table of contents
 
-- [Installation](#installation)
+- [Process](#process)
 - [Installation guide](#installation-guide)
 - [Workflow](#workflow)
 - [Profiles](#profiles)
@@ -22,7 +22,7 @@ Sharing it here in case it's useful to anyone running a similar Arch setup.
 - [Contributing](#contributing)
 - [References](#references)
 
-## Installation
+## Process
 
 ### Phase 1 — Bootstrap (Live ISO)
 
@@ -41,8 +41,6 @@ Reboot into the freshly installed system and run `provision.sh`. It installs pac
 ## Installation guide
 
 ### Phase 1 — Bootstrap (Live ISO)
-
-*Manual (User):*
 
 1. Download the [Arch Linux ISO](https://archlinux.org/download/) and flash it to a USB drive.
 
@@ -73,30 +71,18 @@ Reboot into the freshly installed system and run `provision.sh`. It installs pac
    bash bootstrap.sh profiles/workstation.conf
    ```
 
-*Automation (bootstrap.sh):*
+*The following steps are performed automatically by `bootstrap.sh`:*
 
 7. Check that `DISK` is a valid block device and require explicit `yes` confirmation before any write.
 8. Create a GPT table with a 512 MB EFI partition and a root partition, and format them as FAT32 and ext4 or btrfs respectively.
 9. Install the base Arch packages into `/mnt`.
 10. Enter the new system and apply the base configuration.
 11. Place `provision.sh` in the user `$HOME` directory, ready to run after reboot.
-
-### Bootstrap options reference
-
-| Option | Description |
-|--------|-------------|
-| `--version` | Print the current HippoArch version |
-| `--detect` | Show CPU, disk, and RAM info for the current machine |
-| `--list` | List available profiles from the GitHub repo |
-| `--fetch-all` | Download all profiles and `lib/partition.sh` locally |
-| `--fetch <profile>` | Download a single profile and `lib/partition.sh` without running |
-| `<profile>` | Run the full bootstrap using the given profile |
+12. Prompt to reboot — remove the USB stick when asked, then press `y`.
 
 ### Phase 2 — Provisioning (post-reboot)
 
-*Manual (User):*
-
-1. Login to the machine as USERNAME after reboot.
+1. Log in to the machine as USERNAME after reboot.
 2. Navigate to the hippoarch directory.
    ```bash
    cd hippoarch
@@ -106,12 +92,11 @@ Reboot into the freshly installed system and run `provision.sh`. It installs pac
    ./provision.sh
    ```
 
-*Automation (provision.sh):*
+*The following steps are performed automatically by `provision.sh`:*
 
 4. Install the base packages defined in `common/base.sh`.
-5. Load the IT87 hardware driver and enable sensor monitoring via `lm_sensors`.
-6. Copy dotfiles (`.vimrc`, `.bash_aliases`) to the user home directory.
-7. Run `roles/<role>/install.sh` to apply role-specific packages and configuration.
+5. Copy dotfiles (`.vimrc`, `.bash_aliases`) to the user home directory.
+6. Run `roles/<role>/install.sh` to apply role-specific packages and configuration.
 
 ## Workflow
 
@@ -198,7 +183,7 @@ A profile is a `.conf` file sourced into `bootstrap.sh`. Required fields:
 | `TIMEZONE` | `Europe/Rome` | |
 | `LOCALE` | `en_US.UTF-8` | |
 | `LAYOUT` | `simple` or `btrfs` | |
-| `ROLE` | `server-cwwk` | Written to `/etc/hippoarch.conf` |
+| `ROLE` | — | Derived from profile filename; override only if needed |
 | `EXTRA_PACKAGES` | `"openssh htop"` | Space-separated, optional |
 
 ## Directory structure
@@ -217,7 +202,8 @@ hippoarch/
 │   ├── server-cwwk/install.sh
 │   ├── server-k8s-master/install.sh
 │   ├── server-k8s-node/install.sh
-│   └── workstation/install.sh
+│   ├── workstation/install.sh
+│   └── qemu-test/install.sh
 ├── docs/
 │   ├── user-manual.md      # Full installation and usage guide
 │   └── testing.md          # Testing strategy and developer guide
@@ -230,6 +216,17 @@ hippoarch/
 ```
 
 ## Development
+
+### Bootstrap reference
+
+| Option | Description |
+|--------|-------------|
+| `--version` | Print the current HippoArch version |
+| `--detect` | Show CPU, disk, and RAM info for the current machine |
+| `--list` | List available profiles from the GitHub repo |
+| `--fetch-all` | Download all profiles and `lib/partition.sh` locally |
+| `--fetch <profile>` | Download a single profile and `lib/partition.sh` without running |
+| `<profile>` | Run the full bootstrap using the given profile |
 
 ### Setup
 

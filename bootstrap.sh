@@ -118,6 +118,7 @@ fi
 
 # shellcheck source=/dev/null
 source "$PROFILE"
+ROLE="${ROLE:-$(basename "$PROFILE" .conf)}"
 # shellcheck source=/dev/null
 source lib/partition.sh
 
@@ -258,6 +259,8 @@ BOOTSTRAP_TIME="$((BOOTSTRAP_ELAPSED / 60))m $((BOOTSTRAP_ELAPSED % 60))s"
 # Write install record and lock it
 cat > /mnt/etc/hippoarch.conf <<HICONF
 ROLE="${ROLE:-}"
+ENABLE_SSHD="${ENABLE_SSHD:-0}"
+ENABLE_AIDE="${ENABLE_AIDE:-0}"
 HIPPOARCH_VERSION="${HIPPOARCH_VERSION}"
 BOOTSTRAP_TIME="${BOOTSTRAP_TIME}"
 PROVISION_TIME=""
@@ -265,4 +268,10 @@ HICONF
 chattr +i /mnt/etc/hippoarch.conf
 
 echo "=== Bootstrap Complete (${BOOTSTRAP_TIME}) ==="
-echo "Reboot, then login as $USERNAME and run: cd hippoarch && ./provision.sh [role]"
+echo ""
+read -rp "Remove the USB stick, then press y to reboot or n to exit: " choice || true
+if [[ "$choice" == "y" ]]; then
+    reboot
+else
+    echo "Reboot when ready. Login as $USERNAME and run: cd hippoarch && ./provision.sh"
+fi

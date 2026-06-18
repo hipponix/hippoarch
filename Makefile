@@ -52,6 +52,7 @@ test-functional:
 test: test-unit test-functional
 
 test-integration:
+	@rm -f tests/integration/logs/*
 	@HIPPOARCH_HEADLESS=$${HIPPOARCH_HEADLESS:-$(HEADLESS)} bash tests/integration/run.sh
 
 lint:

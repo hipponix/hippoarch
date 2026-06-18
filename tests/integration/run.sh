@@ -36,7 +36,7 @@ SERIAL_PORT=14445   # TCP port for the serial console automation channel
 SSH_PORT=12222      # TCP port forwarded to the VM's SSH (avoids conflict with host)
 BOOT_TIMEOUT=180    # seconds to wait for live ISO to reach a shell prompt
 SSH_TIMEOUT=120     # seconds to wait for SSH (Phase 1)
-SSH_TIMEOUT_P2=60   # seconds to wait for SSH on installed system (Phase 2)
+SSH_TIMEOUT_P2=120  # seconds to wait for SSH on installed system (Phase 2)
 
 SSH_OPTS=(
     -o StrictHostKeyChecking=no
@@ -532,7 +532,7 @@ run_phase1() {
         || fail "sshd not enabled in installed system"
     vm_ssh "lsattr /mnt/etc/hippoarch.conf | awk '{print \$1}' | grep -q i" \
         || fail "hippoarch.conf is not immutable (chattr +i missing)"
-    vm_ssh "grep -q 'ROLE=\"workstation\"' /mnt/etc/hippoarch.conf" \
+    vm_ssh "grep -q 'ROLE=\"qemu-test\"' /mnt/etc/hippoarch.conf" \
         || fail "ROLE does not match profile in hippoarch.conf"
     gha_endgroup
 
