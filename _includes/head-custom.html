@@ -1,13 +1,15 @@
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('code.language-mermaid').forEach(function (el) {
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  document.querySelectorAll('.language-mermaid').forEach(function (el) {
     var div = document.createElement('div');
     div.className = 'mermaid';
-    div.textContent = el.textContent;
-    el.closest('.highlighter-rouge').replaceWith(div);
+    var code = el.querySelector('code');
+    div.textContent = code ? code.textContent : el.textContent;
+    el.replaceWith(div);
   });
-  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  mermaid.run();
 });
 </script>
 <script>
@@ -17,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var nav = document.createElement('nav');
   var ul = document.createElement('ul');
   headings.forEach(function (h) {
+    if (!h.id) {
+      h.id = h.textContent.toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
+    }
     var li = document.createElement('li');
     var a = document.createElement('a');
     a.href = '#' + h.id;
