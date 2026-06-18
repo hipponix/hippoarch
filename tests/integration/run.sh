@@ -15,7 +15,7 @@
 #
 # Dependencies (install once):
 #   sudo apt install qemu-system-x86 qemu-utils libarchive-tools \
-#                    expect openssh-client curl ovmf
+#                    expect openssh-client curl
 
 set -euo pipefail
 
@@ -53,7 +53,9 @@ SSH_OPTS=(
 DISK_IMG=""
 KERNEL_TMP=""
 INITRD_TMP=""
-OVMF_VARS_TMP=""
+KERNEL_P2_TMP=""
+INITRD_P2_TMP=""
+ROOT_UUID_P2=""
 SSH_KEY_TMP=""
 QEMU_PID=""
 HTTP_PID=""
@@ -70,7 +72,7 @@ cleanup() {
     print_summary
     [[ -n "$QEMU_PID" ]] && kill "$QEMU_PID" 2>/dev/null || true
     [[ -n "$HTTP_PID"  ]] && kill "$HTTP_PID"  2>/dev/null || true
-    rm -f "$KERNEL_TMP" "$INITRD_TMP" "$OVMF_VARS_TMP" 2>/dev/null || true
+    rm -f "$KERNEL_TMP" "$INITRD_TMP" "$KERNEL_P2_TMP" "$INITRD_P2_TMP" 2>/dev/null || true
     rm -f "$SSH_KEY_TMP" "${SSH_KEY_TMP}.pub" 2>/dev/null || true
     rm -f "$DISK_IMG" 2>/dev/null || true
     rm -rf "$HTTP_SERVE_DIR" 2>/dev/null || true
@@ -128,9 +130,17 @@ print_summary() {
         p2_status="SKIP"
     fi
 
+    # Derive counts from phase statuses so interrupted/failed phases are always counted
+    local result_pass=0 result_fail=0
+    [[ "$PHASE1_STATUS" == "pass" ]] && result_pass=$((result_pass + 1))
+    [[ "$PHASE2_STATUS" == "pass" ]] && result_pass=$((result_pass + 1))
+    [[ $PHASE1_START -gt 0 && "$PHASE1_STATUS" != "pass" ]] && \
+        result_fail=$((result_fail + 1))
+    [[ $PHASE2_START -gt 0 && "$PHASE2_STATUS" != "pass" && "$PHASE2_STATUS" != "warn" ]] && \
+        result_fail=$((result_fail + 1))
     local pass_str fail_str
-    [[ $PASS_COUNT -gt 0 ]] && pass_str="${G}${PASS_COUNT} passed${X}" || pass_str="0 passed"
-    [[ $FAIL_COUNT -gt 0 ]] && fail_str="${R}${FAIL_COUNT} failed${X}" || fail_str="0 failed"
+    [[ $result_pass -gt 0 ]] && pass_str="${G}${result_pass} passed${X}" || pass_str="0 passed"
+    [[ $result_fail -gt 0 ]] && fail_str="${R}${result_fail} failed${X}" || fail_str="0 failed"
 
     local version; version=$(cat "$REPO_ROOT/VERSION" 2>/dev/null || echo "—")
     local mode_str; [[ "$HEADLESS" == "1" ]] && mode_str="headless" || mode_str="graphical"
@@ -164,7 +174,7 @@ check_deps() {
         echo ""
         echo "  Install:"
         echo "    sudo apt install qemu-system-x86 qemu-utils libarchive-tools \\"
-        echo "                     expect openssh-client curl ovmf  (sshpass no longer needed)"
+        echo "                     expect openssh-client curl"
         exit 1
     fi
     if ! [[ -w /dev/kvm ]]; then
@@ -230,42 +240,6 @@ extract_kernel() {
     log "ISO label: $ISO_LABEL"
 }
 
-# ── OVMF (UEFI firmware) ─────────────────────────────────────────────────────
-# bootstrap.sh installs GRUB for EFI, so the VM needs UEFI firmware to boot
-# the installed system in Phase 2. Phase 1 (live ISO) works without it.
-find_ovmf() {
-    local code_candidates=(
-        /usr/share/OVMF/OVMF_CODE.fd
-        /usr/share/OVMF/OVMF_CODE_4M.fd
-        /usr/share/ovmf/OVMF.fd
-        /usr/share/qemu/OVMF.fd
-    )
-    local vars_candidates=(
-        /usr/share/OVMF/OVMF_VARS.fd
-        /usr/share/OVMF/OVMF_VARS_4M.fd
-        /usr/share/ovmf/OVMF_VARS.fd
-    )
-
-    OVMF_CODE=""
-    OVMF_VARS_SRC=""
-    for path in "${code_candidates[@]}"; do
-        [[ -f "$path" ]] && OVMF_CODE="$path" && break
-    done
-    for path in "${vars_candidates[@]}"; do
-        [[ -f "$path" ]] && OVMF_VARS_SRC="$path" && break
-    done
-
-    if [[ -n "$OVMF_CODE" && -n "$OVMF_VARS_SRC" ]]; then
-        log "UEFI firmware: $OVMF_CODE"
-        SKIP_PHASE2=0
-    else
-        warn "OVMF not found — Phase 2 (boot into installed system) will be skipped."
-        warn "Install: sudo apt install ovmf"
-        UEFI_ARGS=()
-        SKIP_PHASE2=1
-    fi
-}
-
 # ── Disk setup ───────────────────────────────────────────────────────────────
 create_disk() {
     DISK_IMG=$(mktemp /tmp/hippoarch-disk-XXXXXX.qcow2)
@@ -312,8 +286,8 @@ start_vm_phase1() {
     sleep 3
 }
 
-# Phase 2: UEFI boot into the installed system. No kernel override — OVMF
-# picks up the EFI GRUB entry written by grub-install during Phase 1.
+# Phase 2: direct kernel boot into the installed system — same technique as
+# Phase 1. Bypasses GRUB/OVMF, keeps virtio disk, serial works out of the box.
 start_vm_phase2() {
     hr
     mkdir -p "$LOG_DIR"
@@ -327,20 +301,18 @@ start_vm_phase2() {
         log "Starting Phase 2 VM in headless mode..."
     else
         display_arg="-display gtk"
-        log "Starting Phase 2 VM — UEFI boot into installed system."
+        log "Starting Phase 2 VM — direct kernel boot into installed system."
     fi
 
-    # Phase 2 uses AHCI (SATA) instead of virtio-blk: Ubuntu's OVMF does not
-    # include VirtioBlkDxe, so it cannot find a virtio disk at boot time.
     qemu-system-x86_64 \
         -machine q35 \
         "${kvm_args[@]}" \
-        "${UEFI_ARGS[@]}" \
         -m "$VM_RAM" \
         -smp "$VM_CPUS" \
-        -device ahci,id=ahci0 \
-        -drive "file=$DISK_IMG,format=qcow2,if=none,id=hd0,cache=writeback" \
-        -device ide-hd,drive=hd0,bus=ahci0.0 \
+        -kernel "$KERNEL_P2_TMP" \
+        -initrd "$INITRD_P2_TMP" \
+        -append "root=UUID=$ROOT_UUID_P2 rw console=tty0 console=ttyS0,115200 quiet" \
+        -drive "file=$DISK_IMG,format=qcow2,if=virtio,cache=writeback" \
         -nic "user,model=virtio,hostfwd=tcp:127.0.0.1:${SSH_PORT}-:22" \
         -serial "tcp:127.0.0.1:${SERIAL_PORT},server,nowait" \
         $display_arg \
@@ -348,7 +320,7 @@ start_vm_phase2() {
 
     QEMU_PID=$!
     log "QEMU PID: $QEMU_PID  (log: $LOG_DIR/qemu-phase2.log)"
-    sleep 5
+    sleep 3
 }
 
 # ── Serial console automation ─────────────────────────────────────────────────
@@ -477,7 +449,7 @@ run_phase1() {
 
     gha_group "Phase 1: upload scripts"
     log "Uploading scripts to VM..."
-    vm_ssh "mkdir -p /root/hippoarch/lib /root/hippoarch/profiles /root/hippoarch/common /root/hippoarch/roles"
+    vm_ssh "mkdir -p /root/hippoarch/lib /root/hippoarch/profiles /root/hippoarch/common /root/hippoarch/features"
     vm_scp_to "$REPO_ROOT/bootstrap.sh"
     vm_scp_to "$REPO_ROOT/provision.sh"
     vm_scp_to "$REPO_ROOT/VERSION"
@@ -534,6 +506,17 @@ run_phase1() {
         || fail "SERVICES missing from hippoarch.conf"
     gha_endgroup
 
+    log "Extracting kernel and initrd for Phase 2 direct boot..."
+    KERNEL_P2_TMP=$(mktemp /tmp/hippoarch-p2-vmlinuz-XXXXXX)
+    INITRD_P2_TMP=$(mktemp /tmp/hippoarch-p2-initramfs-XXXXXX)
+    vm_ssh "cat /mnt/boot/vmlinuz-linux"      > "$KERNEL_P2_TMP"
+    vm_ssh "cat /mnt/boot/initramfs-linux.img" > "$INITRD_P2_TMP"
+    ROOT_UUID_P2=$(vm_ssh "awk '\$2==\"/\" {gsub(/UUID=/,\"\",\$1); print \$1}' /mnt/etc/fstab")
+    [[ -s "$KERNEL_P2_TMP" ]]  || fail "Failed to extract vmlinuz-linux from installed system"
+    [[ -s "$INITRD_P2_TMP" ]]  || fail "Failed to extract initramfs-linux.img from installed system"
+    [[ -n "$ROOT_UUID_P2"  ]]  || fail "Failed to read root UUID from /mnt/etc/fstab"
+    log "Root UUID: $ROOT_UUID_P2"
+
     PHASE1_STATUS="pass"; PHASE1_END=$(date +%s)
     pass "Phase 1 — Bootstrap completed and verified"
     log ""
@@ -553,13 +536,6 @@ run_phase2() {
     log "Stopping Phase 1 VM..."
     stop_vm
     sleep 3
-
-    # Fresh OVMF NVRAM — Phase 1 ran without UEFI so grub-install wrote the EFI
-    # entry into the disk image's EFI partition. Phase 2 boots from that entry.
-    OVMF_VARS_TMP=$(mktemp /tmp/hippoarch-ovmf-vars-XXXXXX.fd)
-    cp "$OVMF_VARS_SRC" "$OVMF_VARS_TMP"
-    UEFI_ARGS=(-drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE"
-               -drive "if=pflash,format=raw,file=$OVMF_VARS_TMP")
 
     start_vm_phase2
 
@@ -593,8 +569,8 @@ run_phase2() {
         || fail "provision.sh missing from installed /home/testuser/hippoarch"
     vm_ssh "[[ -d /home/testuser/hippoarch/common ]]" \
         || fail "common/ missing from installed /home/testuser/hippoarch (tarball download failed?)"
-    vm_ssh "[[ -d /home/testuser/hippoarch/roles ]]" \
-        || fail "roles/ missing from installed /home/testuser/hippoarch (tarball download failed?)"
+    vm_ssh "[[ -d /home/testuser/hippoarch/features ]]" \
+        || fail "features/ missing from installed /home/testuser/hippoarch (download failed?)"
 
     log "Running provision.sh on the installed system..."
     vm_ssh "cd /home/testuser/hippoarch && bash provision.sh"
@@ -620,19 +596,13 @@ check_deps
 get_iso
 generate_ssh_key
 extract_kernel
-find_ovmf
 create_disk
 start_local_http
 TEST_START=$(date +%s)
 start_vm_phase1
 automate_serial
 run_phase1
-
-if [[ "${SKIP_PHASE2:-0}" == "0" ]]; then
-    run_phase2
-else
-    warn "Phase 2 skipped (OVMF not found — install the ovmf package to enable it)."
-fi
+run_phase2
 
 hr
 log "=== Integration test complete ==="

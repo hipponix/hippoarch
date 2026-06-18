@@ -240,6 +240,8 @@ pacman -S --noconfirm grub efibootmgr
 # Add serial console and reduce menu timeout (grub creates /etc/default/grub on install)
 sed -i 's|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0,115200"|' /etc/default/grub
 sed -i 's|^GRUB_TIMEOUT=.*|GRUB_TIMEOUT=2|' /etc/default/grub
+echo 'GRUB_TERMINAL_OUTPUT="serial console"' >> /etc/default/grub
+echo 'GRUB_SERIAL_COMMAND="serial --speed=115200"' >> /etc/default/grub
 # --removable skips EFI variable writes (needed inside a non-UEFI chroot)
 # and creates the module tree; grub.cfg goes to /boot/grub/grub.cfg
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --removable
@@ -250,12 +252,18 @@ grub-mkconfig -o /boot/grub/grub.cfg
 grub-mkstandalone \
     --format=x86_64-efi \
     --output=/boot/EFI/BOOT/BOOTX64.EFI \
-    "boot/grub/grub.cfg=/boot/grub/grub.cfg"
+    "boot/grub/grub.cfg=/boot/grub/grub.cfg" \
+    || echo "WARNING: grub-mkstandalone failed — Phase 2 GRUB boot may fail"
 
 EOF
 
-echo "Copying HippoArch for post-install..."
-cp -a "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" /mnt/home/"$USERNAME"/hippoarch
+if [[ -n "${HIPPOARCH_TAR_URL:-}" ]]; then
+    echo "Downloading HippoArch from $HIPPOARCH_TAR_URL..."
+    curl -sL "$HIPPOARCH_TAR_URL" | tar xz -C /mnt/home/"$USERNAME"/
+else
+    echo "Copying HippoArch for post-install..."
+    cp -a "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" /mnt/home/"$USERNAME"/hippoarch
+fi
 arch-chroot /mnt chown -R "$USERNAME":"$USERNAME" "/home/$USERNAME/hippoarch"
 
 BOOTSTRAP_ELAPSED=$(( $(date +%s) - BOOTSTRAP_START ))
