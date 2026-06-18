@@ -256,10 +256,10 @@ See [docs/testing.md](docs/testing.md) for the full testing strategy.
 ### Release
 
 ```bash
-make release   # merge to main, tag vX.Y.Z, push — triggers the CI release pipeline
+make release   # auto-increments patch version, tags, and pushes — triggers the CI release pipeline
 ```
 
-Bump `VERSION` before running. The pipeline builds the tarball and publishes a GitHub release.
+Run from `main` after merging all changes. The version is derived automatically from the latest git tag (`v0.1.1 → v0.1.2`). For a minor or major bump, edit `VERSION` manually before running. The pipeline builds the tarball and publishes a GitHub release.
 
 ## Contributing
 

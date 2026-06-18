@@ -19,7 +19,7 @@ help:
 	@echo "  make test              - Run unit + functional tests"
 	@echo "  make test-syntax       - Bash syntax check (bash -n)"
 	@echo "  make test-integration  - Run QEMU integration test (HEADLESS=1 for headless)"
-	@echo "  make release           - Tag and push v$(VERSION), triggering the release pipeline"
+	@echo "  make release           - Auto-increment patch version, tag, and push from main"
 
 install-deps:
 	@echo "Detecting package manager..."
@@ -76,25 +76,22 @@ test-syntax:
 
 release:
 	@set -e; \
+	[[ "$$(git branch --show-current)" == "main" ]] || \
+	    { echo "Error: run make release from main"; exit 1; }; \
 	git diff --quiet HEAD || { echo "Error: uncommitted changes — commit first"; exit 1; }; \
-	if git tag -l "v$(VERSION)" | grep -q . || \
-	   git ls-remote --tags origin "refs/tags/v$(VERSION)" | grep -q .; then \
-	    echo "Error: tag v$(VERSION) already exists — bump VERSION first"; exit 1; \
-	fi; \
-	latest=$$(git tag --sort=-v:refname | head -1); \
-	branch=$$(git branch --show-current); \
-	echo "Branch:             $$branch"; \
-	echo "Current latest tag: $${latest:-none}"; \
-	echo "New release:        v$(VERSION)"; \
-	read -rp "Confirm? [y/N] " ans; \
+	git pull origin main --quiet; \
+	latest=$$(git tag --sort=-v:refname | grep '^v' | head -1 | tr -d 'v'); \
+	[[ -z "$$latest" ]] && latest="0.0.0"; \
+	IFS='.' read -r major minor patch <<< "$$latest"; \
+	next="$$major.$$minor.$$((patch + 1))"; \
+	echo "Latest tag:   v$${latest}"; \
+	echo "Next release: v$$next"; \
+	read -rp "Confirm release v$$next? [y/N] " ans; \
 	[[ "$$ans" == "y" || "$$ans" == "Y" ]] || { echo "Aborted."; exit 1; }; \
-	[[ "$$branch" != "main" ]] || { echo "Error: run make release from a release branch, not main"; exit 1; }; \
-	echo "Merging $$branch → main..."; \
-	git checkout main; \
-	git pull origin main; \
-	git merge --no-ff "$$branch" -m "release: merge $$branch for v$(VERSION)"; \
+	echo "$$next" > VERSION; \
+	git add VERSION; \
+	git commit -m "chore: bump version to v$$next"; \
 	git push origin main; \
-	echo "Tagging v$(VERSION)..."; \
-	git tag "v$(VERSION)"; \
-	git push origin "v$(VERSION)"; \
-	echo "Pipeline: https://github.com/hipponix/hippoarch/actions"
+	git tag "v$$next"; \
+	git push origin "v$$next"; \
+	echo "Released v$$next — https://github.com/hipponix/hippoarch/actions"
