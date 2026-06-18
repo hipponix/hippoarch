@@ -458,7 +458,7 @@ start_local_http() {
     log "Packing local repo → $HTTP_SERVE_DIR/hippoarch.tar.gz"
     (cd "$REPO_ROOT" && tar czf "$HTTP_SERVE_DIR/hippoarch.tar.gz" \
         --transform 's|^|hippoarch/|' \
-        bootstrap.sh provision.sh VERSION lib/ profiles/ common/ roles/)
+        bootstrap.sh provision.sh VERSION lib/ profiles/ common/ features/)
 
     python3 -m http.server "$HTTP_PORT" --directory "$HTTP_SERVE_DIR" &>/dev/null &
     HTTP_PID=$!
@@ -530,8 +530,8 @@ run_phase1() {
         || fail "/mnt/home/testuser not found"
     vm_ssh "[[ -L /mnt/etc/systemd/system/multi-user.target.wants/sshd.service ]]" \
         || fail "sshd not enabled in installed system"
-    vm_ssh "grep -q 'ROLE=\"qemu-test\"' /mnt/etc/hippoarch.conf" \
-        || fail "ROLE does not match profile in hippoarch.conf"
+    vm_ssh "grep -q 'SERVICES=' /mnt/etc/hippoarch.conf" \
+        || fail "SERVICES missing from hippoarch.conf"
     gha_endgroup
 
     PHASE1_STATUS="pass"; PHASE1_END=$(date +%s)

@@ -176,11 +176,12 @@ for _pkg in ${BASE_PKGS_REMOVE:-}; do
 done
 unset _pkg _filtered _p
 
-if [[ "${ENABLE_SSHD:-0}" == "1" ]]; then
-    [[ " ${BASE_PKGS[*]} " =~ " openssh " ]] || BASE_PKGS+=(openssh)
-else
-    ENABLE_SSHD=0
-fi
+for _svc_entry in ${SERVICES:-}; do
+    _pkg="${_svc_entry%%:*}"
+    # shellcheck disable=SC2076
+    [[ " ${BASE_PKGS[*]} " =~ " ${_pkg} " ]] || BASE_PKGS+=("$_pkg")
+done
+unset _svc_entry _pkg
 
 pacstrap /mnt "${BASE_PKGS[@]}"
 
@@ -211,8 +212,12 @@ useradd -m -G wheel "$USERNAME"
 echo "$USERNAME:$USER_PASSWORD" | chpasswd
 echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
 
-# Optional services
-[[ "$ENABLE_SSHD" == "1" ]] && systemctl enable sshd
+# Enable services from SERVICES list
+for _svc_entry in ${SERVICES:-}; do
+    _svc="\${_svc_entry##*:}"
+    systemctl enable "\$_svc"
+done
+unset _svc_entry _svc
 
 # Network (systemd-networkd with DHCP for all wired adapters)
 mkdir -p /etc/systemd/network
@@ -258,9 +263,12 @@ BOOTSTRAP_TIME="$((BOOTSTRAP_ELAPSED / 60))m $((BOOTSTRAP_ELAPSED % 60))s"
 
 # Write install record and lock it
 cat > /mnt/etc/hippoarch.conf <<HICONF
-ROLE="${ROLE:-}"
-ENABLE_SSHD="${ENABLE_SSHD:-0}"
+SERVICES="${SERVICES:-}"
+ENABLE_FANCONTROL="${ENABLE_FANCONTROL:-0}"
+ENABLE_KDE="${ENABLE_KDE:-0}"
 ENABLE_AIDE="${ENABLE_AIDE:-0}"
+IT87_FORCE_ID="${IT87_FORCE_ID:-}"
+CUSTOM_SCRIPT="${CUSTOM_SCRIPT:-}"
 HIPPOARCH_VERSION="${HIPPOARCH_VERSION}"
 BOOTSTRAP_TIME="${BOOTSTRAP_TIME}"
 PROVISION_TIME=""

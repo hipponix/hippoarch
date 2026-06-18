@@ -96,7 +96,7 @@ Reboot into the freshly installed system and run `provision.sh`. It installs pac
 
 4. Install the base packages defined in `common/base.sh`.
 5. Copy dotfiles (`.vimrc`, `.bash_aliases`) to the user home directory.
-6. Run `roles/<role>/install.sh` to apply role-specific packages and configuration.
+6. Install and enable each entry in `SERVICES`, then run enabled feature scripts (`fancontrol`, `kde`, `aide`) and `CUSTOM_SCRIPT` if set.
 
 ## Workflow
 
@@ -158,7 +158,7 @@ flowchart LR
         P1["4. Install base packages"]:::auto
         P2["5. Configure hardware\n& sensors"]:::auto
         P3["6. Deploy dotfiles"]:::auto
-        P4["7. Apply role\nconfiguration"]:::auto
+        P4["7. Enable services\n& feature scripts"]:::auto
         P1 --> P2 --> P3 --> P4
     end
 
@@ -183,8 +183,12 @@ A profile is a `.conf` file sourced into `bootstrap.sh`. Required fields:
 | `TIMEZONE` | `Europe/Rome` | |
 | `LOCALE` | `en_US.UTF-8` | |
 | `LAYOUT` | `simple` or `btrfs` | |
-| `ROLE` | — | Derived from profile filename; override only if needed |
-| `EXTRA_PACKAGES` | `"openssh htop"` | Space-separated, optional |
+| `SERVICES` | `"openssh:sshd fail2ban"` | Space-separated `pkg:svc` pairs; colon only when package name differs from service name |
+| `ENABLE_FANCONTROL` | `0` or `1` | Load it87 driver and start fancontrol |
+| `ENABLE_KDE` | `0` or `1` | Install plasma-meta and enable sddm |
+| `ENABLE_AIDE` | `0` or `1` | Initialise AIDE file-integrity database |
+| `CUSTOM_SCRIPT` | `"scripts/my-setup.sh"` | Run an extra script at the end of provision |
+| `EXTRA_PACKAGES` | `"htop"` | Space-separated, installed during bootstrap |
 
 ## Directory structure
 
@@ -198,12 +202,10 @@ hippoarch/
 ├── common/
 │   ├── base.sh             # Packages, sensors, dotfiles — all machines
 │   └── dotfiles/           # .vimrc, .bash_aliases
-├── roles/
-│   ├── server-cwwk/install.sh
-│   ├── server-k8s-master/install.sh
-│   ├── server-k8s-node/install.sh
-│   ├── workstation/install.sh
-│   └── qemu-test/install.sh
+├── features/
+│   ├── fancontrol.sh           # it87 driver + lm_sensors + fancontrol daemon
+│   ├── kde.sh                  # plasma-meta + sddm
+│   └── aide.sh                 # AIDE file-integrity init
 ├── docs/
 │   ├── user-manual.md      # Full installation and usage guide
 │   └── testing.md          # Testing strategy and developer guide
@@ -264,6 +266,24 @@ Run from `main` after merging all changes. The version is derived automatically 
 ## Contributing
 
 Issues and pull requests are welcome. If you're adding a new profile or role, make sure `make test` passes locally before opening a PR. For anything non-trivial, open an issue first so we can discuss the approach.
+
+## HippoArch vs Ansible
+
+HippoArch handles the parts Ansible cannot: booting from a live ISO, partitioning a blank disk, and installing the base system from scratch. Ansible assumes a running OS and an SSH target — it cannot do Phase 1.
+
+Use HippoArch when:
+
+- You are installing onto a bare machine from the live ISO.
+- The setup is straightforward: a package list, a few systemd units, dotfiles.
+- You want a single self-contained bash script with no control-plane dependencies.
+
+Switch to Ansible when:
+
+- You manage more than a handful of machines and need idempotent re-runs.
+- Configuration involves complex templating, conditionals, or role dependencies across many hosts.
+- You already have an Ansible inventory and playbooks — HippoArch gives you a clean OS to point them at.
+
+The intended boundary is: HippoArch gets you to a logged-in Arch system. Everything beyond that — multi-machine orchestration, complex application stacks, day-2 ops — is where Ansible (or similar tools) earns its place.
 
 ## References
 

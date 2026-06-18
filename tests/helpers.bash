@@ -19,12 +19,11 @@ setup_test_env() {
     # Stub common/base.sh so it doesn't need real packages
     printf '#!/bin/bash\necho "=== base stub ==="\n' > "$TEST_DIR/common/base.sh"
 
-    # Stub all valid roles
-    local role
-    for role in server-cwwk server-k8s-master server-k8s-node workstation; do
-        mkdir -p "$TEST_DIR/roles/$role"
-        printf '#!/bin/bash\necho "=== role %s stub ==="\n' "$role" \
-            > "$TEST_DIR/roles/$role/install.sh"
+    # Stub feature scripts
+    mkdir -p "$TEST_DIR/features"
+    for feat in fancontrol aide kde; do
+        printf '#!/bin/bash\necho "=== %s stub ==="\n' "$feat" \
+            > "$TEST_DIR/features/$feat.sh"
     done
 }
 
@@ -44,19 +43,20 @@ USER_PASSWORD="securepassword2"
 TIMEZONE="UTC"
 LOCALE="en_US.UTF-8"
 LAYOUT="simple"
-ROLE="server-cwwk"
+SERVICES="openssh:sshd"
 EOF
 }
 
 make_hippoarch_conf() {
     local path="$1"
     cat > "$path" <<'EOF'
-# HippoArch Installation Record — do not edit manually
+SERVICES="openssh:sshd"
+ENABLE_FANCONTROL=0
+ENABLE_KDE=0
+ENABLE_AIDE=0
+IT87_FORCE_ID=""
+CUSTOM_SCRIPT=""
 HIPPOARCH_VERSION="0.1.0"
-INSTALL_TIMESTAMP="2026-06-13T10:00:00+00:00"
-ARCH_ISO_VERSION="2026.06.01"
-PROFILE="profiles/server-cwwk.conf"
-ROLE="server-cwwk"
 BOOTSTRAP_TIME="5m 30s"
 PROVISION_TIME=""
 EOF

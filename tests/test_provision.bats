@@ -14,36 +14,58 @@ teardown() {
     teardown_test_env
 }
 
-# --- Role detection ---
+# --- Services loop ---
 
-@test "reads ROLE from /etc/hippoarch.conf" {
-    # conf has ROLE=server-cwwk; provision.sh must log the server-cwwk role stub
+@test "SERVICES entry installs the package" {
     cd "$TEST_DIR"
     run bash provision.sh
-    [[ "$output" == *"role server-cwwk stub"* ]]
+    call_was_made "pacman.*openssh"
 }
 
-@test "CLI arg overrides ROLE from conf" {
+@test "SERVICES entry enables the service" {
     cd "$TEST_DIR"
-    run bash provision.sh workstation
-    [[ "$output" == *"role workstation stub"* ]]
+    run bash provision.sh
+    call_was_made "systemctl enable --now sshd"
 }
 
-@test "invalid role exits 1" {
-    cd "$TEST_DIR"
-    run bash provision.sh nonexistent-role
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"not a valid role"* ]]
-}
-
-@test "no role applies base configuration only" {
-    # Remove ROLE from conf and run without arg
-    sed -i 's/^ROLE=.*/ROLE=""/' "$CONF_PATH"
+@test "no SERVICES runs base configuration only" {
+    sed -i 's/^SERVICES=.*/SERVICES=""/' "$CONF_PATH"
     cd "$TEST_DIR"
     run bash provision.sh
     [ "$status" -eq 0 ]
     [[ "$output" == *"base stub"* ]]
-    [[ "$output" == *"No role specified"* ]]
+}
+
+# --- Feature flags ---
+
+@test "ENABLE_FANCONTROL=1 runs features/fancontrol.sh" {
+    sed -i 's/^ENABLE_FANCONTROL=.*/ENABLE_FANCONTROL=1/' "$CONF_PATH"
+    cd "$TEST_DIR"
+    run bash provision.sh
+    [[ "$output" == *"fancontrol stub"* ]]
+}
+
+@test "ENABLE_KDE=1 runs features/kde.sh" {
+    sed -i 's/^ENABLE_KDE=.*/ENABLE_KDE=1/' "$CONF_PATH"
+    cd "$TEST_DIR"
+    run bash provision.sh
+    [[ "$output" == *"kde stub"* ]]
+}
+
+@test "ENABLE_AIDE=1 runs features/aide.sh" {
+    sed -i 's/^ENABLE_AIDE=.*/ENABLE_AIDE=1/' "$CONF_PATH"
+    cd "$TEST_DIR"
+    run bash provision.sh
+    [[ "$output" == *"aide stub"* ]]
+}
+
+@test "CUSTOM_SCRIPT is executed when set" {
+    local script="$TEST_DIR/custom.sh"
+    printf '#!/bin/bash\necho "custom script ran"\n' > "$script"
+    echo "CUSTOM_SCRIPT=$script" >> "$CONF_PATH"
+    cd "$TEST_DIR"
+    run bash provision.sh
+    [[ "$output" == *"custom script ran"* ]]
 }
 
 # --- Timing and conf update ---
@@ -61,4 +83,3 @@ teardown() {
     value=$(grep "^PROVISION_TIME=" "$CONF_PATH" | cut -d= -f2 | tr -d '"')
     [[ "$value" =~ ^[0-9]+m\ [0-9]+s$ ]]
 }
-

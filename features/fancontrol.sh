@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "Applying Server role..."
-
+echo "Enabling fancontrol..."
 sudo pacman -S --needed --noconfirm --quiet lm_sensors
 
-echo "options it87 ignore_resource_conflict=1" | sudo tee /etc/modprobe.d/it87.conf > /dev/null
+modprobe_opts="ignore_resource_conflict=1"
+[[ -n "${IT87_FORCE_ID:-}" ]] && modprobe_opts="$modprobe_opts force_id=$IT87_FORCE_ID"
+echo "options it87 $modprobe_opts" | sudo tee /etc/modprobe.d/it87.conf > /dev/null
 echo "it87" | sudo tee /etc/modules-load.d/it87.conf > /dev/null
 
 if sudo modprobe it87 2>/dev/null && lsmod | grep -q it87; then

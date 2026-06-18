@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# HippoArch - Multi-purpose Arch Linux Setup
-# Usage: ./provision.sh [role]
+# HippoArch - Post-install provisioning
+# Usage: ./provision.sh
 
 set -e
 
@@ -12,58 +12,36 @@ if [[ -f /etc/hippoarch.conf ]]; then
     source /etc/hippoarch.conf
 fi
 
-ROLE=${1:-${ROLE:-}}
-VALID_ROLES=("workstation" "server-cwwk" "server-k8s-master" "server-k8s-node" "qemu-test")
-
-usage() {
-    echo "Usage: $0 [role]"
-    echo "Available roles: ${VALID_ROLES[*]}"
-    exit 1
-}
-
-# 1. Run common base configuration
+# 1. Base configuration
 echo "=== Starting Base Configuration ==="
 bash common/base.sh
 
-# 2. Enable SSH if requested
-if [[ "${ENABLE_SSHD:-0}" == "1" ]]; then
-    echo "=== Enabling SSH ==="
-    sudo pacman -S --needed --noconfirm --quiet openssh
-    if ! sudo systemctl enable --now sshd; then
-        echo "Warning: sshd failed to start"
-        sudo journalctl -u sshd --no-pager -n 20 || true
+# 2. Services
+# Each entry is "package:service" — colon only when the package name differs from the service name.
+# Example: "openssh:sshd fail2ban docker"
+for _svc_entry in ${SERVICES:-}; do
+    _pkg="${_svc_entry%%:*}"
+    _svc="${_svc_entry##*:}"
+    echo "=== Enabling ${_svc} ==="
+    sudo pacman -S --needed --noconfirm --quiet "$_pkg"
+    if ! sudo systemctl enable --now "$_svc"; then
+        echo "Warning: $_svc failed to start"
+        sudo journalctl -u "$_svc" --no-pager -n 20 || true
     fi
-fi
+done
+unset _svc_entry _pkg _svc
 
-# 3. Run role-specific configuration
-if [[ -n "$ROLE" ]]; then
-    # shellcheck disable=SC2076
-    if [[ " ${VALID_ROLES[*]} " =~ " ${ROLE} " ]]; then
-        ROLE_SCRIPT="roles/$ROLE/install.sh"
-        if [[ -f "$ROLE_SCRIPT" ]]; then
-            echo "=== Starting Role: $ROLE ==="
-            bash "$ROLE_SCRIPT"
-        else
-            echo "Role '$ROLE' found, but no install.sh script exists yet at $ROLE_SCRIPT"
-        fi
-    else
-        echo "Error: '$ROLE' is not a valid role."
-        usage
-    fi
-else
-    echo "No role specified. Only base configuration applied."
-    echo "To apply a role, run: $0 [role]"
-    echo "Available roles: ${VALID_ROLES[*]}"
-fi
+# 3. Features
+[[ "${ENABLE_FANCONTROL:-0}" == "1" ]] && bash features/fancontrol.sh
+[[ "${ENABLE_KDE:-0}"        == "1" ]] && bash features/kde.sh
 
-# 4. AIDE — run after all packages/config are applied so the baseline is complete
-if [[ "${ENABLE_AIDE:-0}" == "1" ]]; then
-    echo "=== Initialising AIDE (running in background) ==="
-    sudo pacman -S --needed --noconfirm --quiet aide
-    sudo systemd-run --unit=aide-init \
-        bash -c 'aide --init && mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db'
-    sudo systemctl enable aide.timer
-    echo "AIDE init running in background — check: journalctl -u aide-init -f"
+# 4. AIDE — after all packages are in place so the baseline is complete
+[[ "${ENABLE_AIDE:-0}"       == "1" ]] && bash features/aide.sh
+
+# 5. Custom script
+if [[ -n "${CUSTOM_SCRIPT:-}" ]]; then
+    echo "=== Running custom script: $CUSTOM_SCRIPT ==="
+    bash "$CUSTOM_SCRIPT"
 fi
 
 PROVISION_ELAPSED=$(( $(date +%s) - PROVISION_START ))

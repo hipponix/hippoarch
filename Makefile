@@ -57,7 +57,7 @@ test-integration:
 
 lint:
 	@shellcheck bootstrap.sh provision.sh common/base.sh lib/partition.sh \
-		roles/server-cwwk/install.sh roles/workstation/install.sh
+		features/fancontrol.sh features/aide.sh features/kde.sh
 
 security:
 	@echo "Checking for sensitive patterns..."
