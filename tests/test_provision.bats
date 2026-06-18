@@ -62,12 +62,3 @@ teardown() {
     [[ "$value" =~ ^[0-9]+m\ [0-9]+s$ ]]
 }
 
-@test "chattr -i called before conf update" {
-    (cd "$TEST_DIR" && bash provision.sh)
-    call_was_made "chattr -i $CONF_PATH"
-}
-
-@test "chattr +i called after conf update" {
-    (cd "$TEST_DIR" && bash provision.sh)
-    call_was_made "chattr \+i $CONF_PATH"
-}

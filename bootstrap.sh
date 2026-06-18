@@ -5,7 +5,6 @@ set -e
 
 HIPPOARCH_VERSION=$(cat "$(dirname "$0")/VERSION" 2>/dev/null || echo "dev")
 REPO_RAW_URL="${HIPPOARCH_RAW_URL:-https://raw.githubusercontent.com/hipponix/hippoarch/v0.1.0}"
-REPO_TAR_URL="${HIPPOARCH_TAR_URL:-https://github.com/hipponix/hippoarch/tarball/v0.1.0}"
 REPO_API_URL="https://api.github.com/repos/hipponix/hippoarch/contents"
 
 detect_hardware() {
@@ -177,8 +176,11 @@ for _pkg in ${BASE_PKGS_REMOVE:-}; do
 done
 unset _pkg _filtered _p
 
-ENABLE_SSHD=0
-[[ " ${BASE_PKGS[*]} " =~ " openssh " ]] && ENABLE_SSHD=1
+if [[ "${ENABLE_SSHD:-0}" == "1" ]]; then
+    [[ " ${BASE_PKGS[*]} " =~ " openssh " ]] || BASE_PKGS+=(openssh)
+else
+    ENABLE_SSHD=0
+fi
 
 pacstrap /mnt "${BASE_PKGS[@]}"
 
@@ -245,13 +247,11 @@ grub-mkstandalone \
     --output=/boot/EFI/BOOT/BOOTX64.EFI \
     "boot/grub/grub.cfg=/boot/grub/grub.cfg"
 
-# Download HippoArch for post-install
-echo "Downloading HippoArch for post-install..."
-cd /home/$USERNAME
-mkdir hippoarch
-curl -L "$REPO_TAR_URL" | tar -xz -C hippoarch --strip-components=1
-chown -R $USERNAME:$USERNAME hippoarch
 EOF
+
+echo "Copying HippoArch for post-install..."
+cp -a "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" /mnt/home/"$USERNAME"/hippoarch
+arch-chroot /mnt chown -R "$USERNAME":"$USERNAME" "/home/$USERNAME/hippoarch"
 
 BOOTSTRAP_ELAPSED=$(( $(date +%s) - BOOTSTRAP_START ))
 BOOTSTRAP_TIME="$((BOOTSTRAP_ELAPSED / 60))m $((BOOTSTRAP_ELAPSED % 60))s"
@@ -265,7 +265,6 @@ HIPPOARCH_VERSION="${HIPPOARCH_VERSION}"
 BOOTSTRAP_TIME="${BOOTSTRAP_TIME}"
 PROVISION_TIME=""
 HICONF
-chattr +i /mnt/etc/hippoarch.conf
 
 echo "=== Bootstrap Complete (${BOOTSTRAP_TIME}) ==="
 echo ""

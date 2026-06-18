@@ -70,9 +70,7 @@ PROVISION_ELAPSED=$(( $(date +%s) - PROVISION_START ))
 PROVISION_TIME="$((PROVISION_ELAPSED / 60))m $((PROVISION_ELAPSED % 60))s"
 
 if [[ -f /etc/hippoarch.conf ]]; then
-    sudo chattr -i /etc/hippoarch.conf
-    sed -i "s|^PROVISION_TIME=.*|PROVISION_TIME=\"$PROVISION_TIME\"|" /etc/hippoarch.conf
-    sudo chattr +i /etc/hippoarch.conf
+    sudo sed -i "s|^PROVISION_TIME=.*|PROVISION_TIME=\"$PROVISION_TIME\"|" /etc/hippoarch.conf
 fi
 
 echo "=== Setup Finished (${PROVISION_TIME}) ==="

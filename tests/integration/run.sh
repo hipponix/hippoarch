@@ -530,8 +530,6 @@ run_phase1() {
         || fail "/mnt/home/testuser not found"
     vm_ssh "[[ -L /mnt/etc/systemd/system/multi-user.target.wants/sshd.service ]]" \
         || fail "sshd not enabled in installed system"
-    vm_ssh "lsattr /mnt/etc/hippoarch.conf | awk '{print \$1}' | grep -q i" \
-        || fail "hippoarch.conf is not immutable (chattr +i missing)"
     vm_ssh "grep -q 'ROLE=\"qemu-test\"' /mnt/etc/hippoarch.conf" \
         || fail "ROLE does not match profile in hippoarch.conf"
     gha_endgroup
