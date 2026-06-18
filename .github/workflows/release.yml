@@ -17,7 +17,7 @@ jobs:
         run: |
           tar czf hippoarch.tar.gz \
             --transform 's|^|hippoarch/|' \
-            bootstrap.sh provision.sh VERSION lib/ profiles/ common/ roles/
+            bootstrap.sh provision.sh VERSION lib/ profiles/ common/ features/
 
       - name: Create GitHub release
         env:

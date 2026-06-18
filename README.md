@@ -11,17 +11,6 @@ It was never a clean one-shot implementation though. It grew incrementally, one 
 
 Sharing it here in case it's useful to anyone running a similar Arch setup. Built around my needs — it may not work for many others.
 
-## Table of contents
-
-- [Process](#process)
-- [Installation guide](#installation-guide)
-- [Workflow](#workflow)
-- [Profiles](#profiles)
-- [Directory structure](#directory-structure)
-- [Development](#development)
-- [Contributing](#contributing)
-- [References](#references)
-
 ## Process
 
 ### Phase 1 — Bootstrap (Live ISO)
