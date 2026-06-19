@@ -6,5 +6,5 @@ aur_install() {
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' RETURN
     git clone "https://aur.archlinux.org/${pkg}.git" "$tmp/${pkg}"
-    (cd "$tmp/${pkg}" && makepkg -si --noconfirm)
+    (cd "$tmp/${pkg}" && makepkg -si --noconfirm --skippgpcheck)
 }

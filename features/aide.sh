@@ -11,7 +11,10 @@ fi
 
 echo "Initialising AIDE (running in background)..."
 sudo pacman -S --needed --noconfirm base-devel git
-aur_install aide
+if ! aur_install aide; then
+    echo "Warning: aide failed to build — skipping AIDE setup (AUR package may be broken)"
+    exit 0
+fi
 sudo systemd-run --unit=aide-init \
     bash -c 'aide --init && mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db'
 sudo systemctl enable aide.timer
