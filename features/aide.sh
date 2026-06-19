@@ -1,8 +1,17 @@
 #!/bin/bash
 set -e
 
+# shellcheck source=/dev/null
+source lib/aur.sh
+
+if [[ "${ENABLE_AUR:-0}" != "1" ]]; then
+    echo "Warning: aide is AUR-only — set ENABLE_AUR=1 in your profile to install it"
+    exit 0
+fi
+
 echo "Initialising AIDE (running in background)..."
-sudo pacman -S --needed --noconfirm --quiet aide
+sudo pacman -S --needed --noconfirm base-devel git
+aur_install aide
 sudo systemd-run --unit=aide-init \
     bash -c 'aide --init && mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db'
 sudo systemctl enable aide.timer

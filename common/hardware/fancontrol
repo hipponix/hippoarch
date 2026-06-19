@@ -1,11 +1,11 @@
 INTERVAL=10
 DEVPATH=hwmon3=devices/platform/coretemp.0 hwmon4=devices/platform/it87.2624
-DEVNAME=hwmon3=coretemp hwmon4=it8620
+DEVNAME=hwmon3=coretemp hwmon4=it8786
 FCTEMPS=hwmon4/pwm1=hwmon3/temp1_input
-FCFANS= hwmon4/pwm1=hwmon4/fan1_input
-MINTEMP=hwmon4/pwm1=40  # The temperature threshold where the fan should start ramping up. Set this to 40 (°C).
-MAXTEMP=hwmon4/pwm1=70  # The critical temperature where the fan must hit full blast. Set this to 70 or 75 (°C)
-MINSTART=hwmon4/pwm1=90 # Set this to 90, to ensure that if the fan ever does stop or stall, Linux can reliably jumpstart the motor back into action without any issues.
-MINSTOP=hwmon4/pwm1=80  # Setting it to 80 (which is roughly 30% of total power) ensures that the fan stays well above its stall speed.
-MINPWM=hwmon4/pwm1=80   # This keeps the fan spinning at a low, whisper-quiet idle rather than stopping it completely.
-MAXPWM=hwmon4/pwm1=255  # The speed (0-255) for when things get hot. Set this to 255 (100% full speed) for safety.
+FCFANS=hwmon4/pwm1=hwmon4/fan1_input
+MINTEMP=hwmon4/pwm1=40
+MAXTEMP=hwmon4/pwm1=70
+MINSTART=hwmon4/pwm1=60
+MINSTOP=hwmon4/pwm1=50
+MINPWM=hwmon4/pwm1=50
+MAXPWM=hwmon4/pwm1=255

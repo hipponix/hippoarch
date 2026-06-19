@@ -175,7 +175,8 @@ A profile is a `.conf` file sourced into `bootstrap.sh`. Required fields:
 | `SERVICES` | `"openssh:sshd fail2ban"` | Space-separated `pkg:svc` pairs; colon only when package name differs from service name |
 | `ENABLE_FANCONTROL` | `0` or `1` | Load it87 driver and start fancontrol |
 | `ENABLE_KDE` | `0` or `1` | Install plasma-meta and enable sddm |
-| `ENABLE_AIDE` | `0` or `1` | Initialise AIDE file-integrity database |
+| `ENABLE_AIDE` | `0` or `1` | Initialise AIDE file-integrity database (requires `ENABLE_AUR=1`) |
+| `ENABLE_AUR` | `0` or `1` | Allow installing AUR packages via `makepkg`; required for `aide` and `it87-dkms-git` |
 | `CUSTOM_SCRIPT` | `"scripts/my-setup.sh"` | Run an extra script at the end of provision |
 | `EXTRA_PACKAGES` | `"htop"` | Space-separated, installed during bootstrap |
 

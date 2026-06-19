@@ -8,8 +8,10 @@ set -e
 PROVISION_START=$(date +%s)
 
 if [[ -f /etc/hippoarch.conf ]]; then
+    set -a
     # shellcheck source=/dev/null
     source /etc/hippoarch.conf
+    set +a
 fi
 
 # 1. Base configuration
