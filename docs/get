@@ -1,0 +1,12 @@
+---
+layout: null
+permalink: /get
+---
+#!/bin/sh
+set -e
+curl -LO https://github.com/hipponix/hippoarch/releases/latest/download/hippoarch.tar.gz
+tar xzf hippoarch.tar.gz
+rm hippoarch.tar.gz
+echo ""
+echo "Done. Edit your profile, then run:"
+echo "  cd hippoarch && bash bootstrap.sh profiles/workstation.conf"

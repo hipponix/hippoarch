@@ -44,8 +44,7 @@ Reboot into the freshly installed system and run `provision.sh`. It installs pac
 
 3. Download and extract the latest HippoArch release.
    ```bash
-   curl -LO https://github.com/hipponix/hippoarch/releases/latest/download/hippoarch.tar.gz
-   tar xzf hippoarch.tar.gz && cd hippoarch
+   curl -LO hipponix.github.io/hippoarch/get && sh get
    ```
 4. List available profiles to pick the right one for your hardware.
    ```bash
@@ -178,7 +177,8 @@ A profile is a `.conf` file sourced into `bootstrap.sh`. Required fields:
 | `ENABLE_AIDE` | `0` or `1` | Initialise AIDE file-integrity database (requires `ENABLE_AUR=1`) |
 | `ENABLE_AUR` | `0` or `1` | Allow installing AUR packages via `makepkg`; required for `aide` and `it87-dkms-git` |
 | `CUSTOM_SCRIPT` | `"scripts/my-setup.sh"` | Run an extra script at the end of provision |
-| `EXTRA_PACKAGES` | `"htop"` | Space-separated, installed during bootstrap |
+| `EXTRA_PACKAGES` | `"htop"` | Space-separated, added to pacstrap |
+| `BASE_PKGS_REMOVE` | `"linux-firmware"` | Space-separated packages to drop from the default base before pacstrap |
 
 ## Directory structure
 
