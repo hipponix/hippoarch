@@ -20,6 +20,8 @@ temp/
 *.iso
 *.img
 
+.cache/
+
 # Specific to HippoArch
 # If you create local profiles that shouldn't be shared:
 # profiles/local-*.conf
