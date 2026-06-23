@@ -19,13 +19,13 @@ Flash a USB with the [Arch Linux ISO](https://archlinux.org/download/) and boot 
 
 > Pick one of the existing profiles or create your own — see the [Profiles](#profiles) section.
 
-![Phase 1 — Bootstrap demo](docs/phase1.svg)
+<!-- ![Phase 1 — Bootstrap demo](docs/phase1.svg) -->
 
 ### Phase 2 — Provisioning (post-reboot)
 
 Reboot into the freshly installed system and run `provision.sh`. It installs packages, configures hardware and sensors, deploys dotfiles, and applies the role-specific setup defined in the profile.
 
-![Phase 2 — Provision demo](docs/phase2.svg)
+<!-- ![Phase 2 — Provision demo](docs/phase2.svg) -->
 
 ## Installation guide
 
