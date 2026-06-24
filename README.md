@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml/badge.svg)](https://github.com/hipponix/hippoarch/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hipponix/hippoarch)](https://github.com/hipponix/hippoarch/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 HippoArch automates Arch Linux installation and post-install provisioning in two phases — bootstrap from the live ISO, then provision after reboot — with no dependencies beyond bash and standard Arch tools.
 
